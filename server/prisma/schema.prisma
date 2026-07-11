@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model booking_actions {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  booking_id     String    @db.Uuid
+  acting_user_id String    @db.Uuid
+  action         String
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  users          users     @relation(fields: [acting_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bookings       bookings  @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+model bookings {
+  id                String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hall_id           String                   @db.Uuid
+  requested_by      String                   @db.Uuid
+  status            String                   @default("requested")
+  time_range        Unsupported("tstzrange")
+  response_deadline DateTime?                @default(dbgenerated("(now() + '48:00:00'::interval)")) @db.Timestamptz(6)
+  suggestion_round  Int?                     @default(0)
+  created_at        DateTime?                @default(now()) @db.Timestamptz(6)
+  booking_actions   booking_actions[]
+  halls             halls                    @relation(fields: [hall_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users             users                    @relation(fields: [requested_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model halls {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization_id String        @db.Uuid
+  name            String
+  location_area   String
+  capacity        Int
+  venue_tier      String
+  price_per_slot  Decimal       @db.Decimal
+  created_at      DateTime?     @default(now()) @db.Timestamptz(6)
+  bookings        bookings[]
+  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model organization_members {
+  organization_id String        @db.Uuid
+  user_id         String        @db.Uuid
+  role            String
+  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users           users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([organization_id, user_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model organizations {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  owner_user_id        String                 @db.Uuid
+  name                 String
+  status               String                 @default("pending")
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  halls                halls[]
+  organization_members organization_members[]
+  users                users                  @relation(fields: [owner_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model users {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String
+  email                String                 @unique
+  phone                String?
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  booking_actions      booking_actions[]
+  bookings             bookings[]
+  organization_members organization_members[]
+  organizations        organizations[]
+}
