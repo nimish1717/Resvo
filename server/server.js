@@ -27,6 +27,10 @@ const globalLimiter = rateLimit({
     limit: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    message: {
+        status: false,
+        message: 'Too many requests, please try again later'
+    }
 });
 app.use(globalLimiter);
 
