@@ -72,6 +72,15 @@ CREATE TABLE booking_actions (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id     UUID NOT NULL REFERENCES bookings(id),
     acting_user_id UUID NOT NULL REFERENCES users(id),
-    action         TEXT NOT NULL,
+    action         TEXT NOT NULL CHECK (action IN ('approved','rejected','changes_requested')),
     created_at     TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE refresh_tokens (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id),
+    token_hash  TEXT NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    revoked     BOOLEAN NOT NULL DEFAULT false,
+    created_at  TIMESTAMPTZ DEFAULT now()
 );
