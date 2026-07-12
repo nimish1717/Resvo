@@ -1,4 +1,5 @@
 const prisma = require('../lib/prismaClient');
+const { findSameHallSameDaySlots, findDifferentHallSameTime, findSameHallNextDays } = require('../utils/suggestionLogic');
 
 const createBooking = async (req, res) => {
     try {
@@ -54,7 +55,7 @@ const getBookingById = async (req, res) => {
     try {
         const { id } = req.params;
         const result = await prisma.$queryRaw`
-            SELECT id, hall_id, requested_by, status, time_range::text, response_deadline, created_at
+            SELECT id, hall_id, requested_by, status, time_range::text, response_deadline, created_at, superseded_by, reason, suggestion_round
             FROM bookings
             WHERE id = ${id}::uuid;
         `;
@@ -228,68 +229,19 @@ const getSuggestions = async (req, res) => {
 
         let suggestions = [];
 
-        // Rule 1: Same day, same hall (try +2 hours, +4 hours)
-        const r1 = await prisma.$queryRaw`
-            WITH candidates AS (
-                SELECT ${booking.hall_id}::uuid AS hall_id,
-                       (${booking.start_time}::timestamptz + interval '2 hours') AS start_time,
-                       (${booking.end_time}::timestamptz + interval '2 hours') AS end_time
-                UNION ALL
-                SELECT ${booking.hall_id}::uuid,
-                       (${booking.start_time}::timestamptz + interval '4 hours'),
-                       (${booking.end_time}::timestamptz + interval '4 hours')
-            )
-            SELECT c.* FROM candidates c
-            WHERE NOT EXISTS (
-                SELECT 1 FROM bookings b
-                WHERE b.hall_id = c.hall_id
-                AND b.status IN ('approved', 'active')
-                AND b.time_range && tstzrange(c.start_time, c.end_time)
-            )
-            LIMIT 2;
-        `;
-        if (r1.length > 0) suggestions = r1;
+        // Rule 1: Same day, same hall (using robust JS gap-finding helper)
+        suggestions = await findSameHallSameDaySlots(booking.hall_id, booking.start_time, booking.end_time);
 
-        // Rule 2: Same time, different hall in same org
+        // Rule 2: Same hall, next 3 days
         if (suggestions.length === 0) {
-            const r2 = await prisma.$queryRaw`
-                SELECT h.id as hall_id, ${booking.start_time}::timestamptz as start_time, ${booking.end_time}::timestamptz as end_time
-                FROM halls h
-                WHERE h.organization_id = ${booking.organization_id}::uuid
-                AND h.id != ${booking.hall_id}::uuid
-                AND NOT EXISTS (
-                    SELECT 1 FROM bookings b
-                    WHERE b.hall_id = h.id
-                    AND b.status IN ('approved', 'active')
-                    AND b.time_range && tstzrange(${booking.start_time}::timestamptz, ${booking.end_time}::timestamptz)
-                )
-                LIMIT 2;
-            `;
-            if (r2.length > 0) suggestions = r2;
+            suggestions = await findSameHallNextDays(booking.hall_id, booking.start_time, booking.end_time);
         }
 
-        // Rule 3: Next 3 days, same hall, same time
+        // Rule 3: Same time, different hall in same org (Cross-hall, Last Resort)
         if (suggestions.length === 0) {
-            const r3 = await prisma.$queryRaw`
-                WITH candidates AS (
-                    SELECT ${booking.hall_id}::uuid AS hall_id,
-                           (${booking.start_time}::timestamptz + interval '1 day') AS start_time,
-                           (${booking.end_time}::timestamptz + interval '1 day') AS end_time
-                    UNION ALL
-                    SELECT ${booking.hall_id}::uuid,
-                           (${booking.start_time}::timestamptz + interval '2 days'),
-                           (${booking.end_time}::timestamptz + interval '2 days')
-                )
-                SELECT c.* FROM candidates c
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM bookings b
-                    WHERE b.hall_id = c.hall_id
-                    AND b.status IN ('approved', 'active')
-                    AND b.time_range && tstzrange(c.start_time, c.end_time)
-                )
-                LIMIT 2;
-            `;
-            if (r3.length > 0) suggestions = r3;
+            // Need the organization_id for this hall
+            const hallData = await prisma.halls.findUnique({ where: { id: booking.hall_id } });
+            suggestions = await findDifferentHallSameTime(hallData.organization_id, booking.hall_id, booking.start_time, booking.end_time);
         }
 
         if (suggestions.length === 0) {
@@ -315,7 +267,7 @@ const acceptSuggestion = async (req, res) => {
         const { hallId, startTime, endTime } = req.body;
         const userId = req.user.userId;
 
-        const bookings = await prisma.$queryRaw`SELECT * FROM bookings WHERE id = ${id}::uuid`;
+        const bookings = await prisma.$queryRaw`SELECT id, requested_by, suggestion_round FROM bookings WHERE id = ${id}::uuid`;
         if (bookings.length === 0) return res.status(404).json({ status: false, message: 'Booking not found' });
         const originalBooking = bookings[0];
 
@@ -365,7 +317,7 @@ const declineSuggestions = async (req, res) => {
         const { id } = req.params;
         const userId = req.user.userId;
 
-        const bookings = await prisma.$queryRaw`SELECT * FROM bookings WHERE id = ${id}::uuid`;
+        const bookings = await prisma.$queryRaw`SELECT id, requested_by FROM bookings WHERE id = ${id}::uuid`;
         if (bookings.length === 0) return res.status(404).json({ status: false, message: 'Booking not found' });
         const originalBooking = bookings[0];
 
