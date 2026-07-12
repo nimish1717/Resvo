@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const prisma = require('../lib/prismaClient');
+const { invalidateHallsCache } = require('../lib/cache');
 
 const createOrganization = async (req, res) => {
     try {
@@ -72,6 +73,13 @@ async function transitionOrganization(id, targetStatus) {
         where: { id, status: 'pending' },
         data: { status: targetStatus },
     });
+
+    if (result.count > 0) {
+        // Any status change on an org can flip its halls' public visibility —
+        // bust the cache so GET /halls doesn't serve a stale list.
+        await invalidateHallsCache();
+    }
+
     return result.count > 0;
 }
 

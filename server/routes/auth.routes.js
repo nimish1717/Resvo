@@ -1,5 +1,7 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
+const RedisStore = require("rate-limit-redis").default;
+const redis = require("../lib/redisClient");
 const { signup, login, refresh, logout } = require("../controllers/auth.controller");
 
 const router = express.Router();
@@ -9,6 +11,9 @@ const authLimiter = rateLimit({
     limit: 5,
     standardHeaders: true,
     legacyHeaders: false,
+    store: new RedisStore({
+        sendCommand: (...args) => redis.call(...args),
+    }),
     message: {
         status: false,
         message: 'Too many authentication attempts, please try again after 15 minutes'
@@ -20,6 +25,9 @@ const refreshLimiter = rateLimit({
     limit: 20,
     standardHeaders: true,
     legacyHeaders: false,
+    store: new RedisStore({
+        sendCommand: (...args) => redis.call(...args),
+    }),
     message: {
         status: false,
         message: 'Too many refresh attempts'

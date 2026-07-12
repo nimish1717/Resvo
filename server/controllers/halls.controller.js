@@ -1,19 +1,28 @@
 const prisma = require('../lib/prismaClient');
+const { getCachedHalls, setCachedHalls, invalidateHallsCache } = require('../lib/cache');
 
 async function getAllHalls(req, res) {
     try {
-        const halls = await prisma.halls.findMany({
-            where: {
-                organizations: {
-                    status: 'approved',
-                },
-            },
-            orderBy: {
-                created_at: 'desc',
-            },
-        });
+        let source = 'cache';
+        const cacheResponse = await getCachedHalls();
+        let halls = cacheResponse.status ? cacheResponse.data : null;
 
-        res.json({ halls });
+        if (!halls) {
+            source = 'db';
+            halls = await prisma.halls.findMany({
+                where: {
+                    organizations: {
+                        status: 'approved',
+                    },
+                },
+                orderBy: {
+                    created_at: 'desc',
+                },
+            });
+            await setCachedHalls(halls);
+        }
+
+        res.json({ source, halls });
     } catch (err) {
         res.status(500).json({
             status: 'error',
@@ -59,6 +68,9 @@ const createHall = async (req, res) => {
                 price_per_slot: pricePerSlot,
             },
         });
+
+        // Invalidate halls cache because a new hall was created
+        await invalidateHallsCache();
 
         return res.status(201).json({ 
             status: true,
