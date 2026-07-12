@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { requireAuth, requireRole } = require('../middleware/auth.middleware');
+const prisma = require('../lib/prismaClient');
 
 const {
     createBooking,
@@ -9,14 +11,24 @@ const {
     rejectBooking,
 } = require('../controllers/bookings.controller');
 
-router.post('/', createBooking);
+const resolveOrgFromBookingId = async (req) => {
+    const result = await prisma.$queryRaw`
+        SELECT h.organization_id 
+        FROM bookings b 
+        JOIN halls h ON b.hall_id = h.id 
+        WHERE b.id = ${req.params.id}::uuid
+    `;
+    return result[0]?.organization_id;
+};
 
-router.get('/hall/:hallId', getBookingsByHall);
+router.post('/', requireAuth, createBooking);
 
-router.get('/:id', getBookingById);
+router.get('/hall/:hallId', requireAuth, getBookingsByHall);
 
-router.post('/:id/approve', approveBooking);
+router.get('/:id', requireAuth, getBookingById);
 
-router.post('/:id/reject', rejectBooking);
+router.post('/:id/approve', requireAuth, requireRole('org_admin', resolveOrgFromBookingId), approveBooking);
+
+router.post('/:id/reject', requireAuth, requireRole('org_admin', resolveOrgFromBookingId), rejectBooking);
 
 module.exports = router;

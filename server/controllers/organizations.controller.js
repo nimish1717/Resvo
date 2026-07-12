@@ -2,25 +2,33 @@ const prisma = require('../lib/prismaClient');
 
 const createOrganization = async (req, res) => {
     try {
-        const { ownerUserId, name } = req.body;
-        if (!ownerUserId || !name) {
+        const { name } = req.body;
+        const ownerUserId = req.user.userId;
+        
+        if (!name) {
             return res.status(400).json({
                 status: false,
-                message: 'ownerUserId and name are required'
+                message: 'name is required'
             });
         }
-        const owner = await prisma.users.findUnique({ where: { id: ownerUserId } });
-        if (!owner) {
-            return res.status(404).json({
-                status: false,
-                message: 'User not found'
+        
+        const organization = await prisma.$transaction(async (tx) => {
+            const org = await tx.organizations.create({
+                data: {
+                    owner_user_id: ownerUserId,
+                    name,
+                },
             });
-        }
-        const organization = await prisma.organizations.create({
-            data: {
-                owner_user_id: ownerUserId,
-                name,
-            },
+            
+            await tx.organization_members.create({
+                data: {
+                    organization_id: org.id,
+                    user_id: ownerUserId,
+                    role: 'org_admin'
+                }
+            });
+            
+            return org;
         });
         return res.status(201).json({
             status: true,

@@ -2,11 +2,13 @@ const prisma = require('../lib/prismaClient');
 
 const createBooking = async (req, res) => {
     try {
-        const { hallId, requestedBy, startTime, endTime } = req.body;
-        if (!hallId || !requestedBy || !startTime || !endTime) {
+        const { hallId, startTime, endTime } = req.body;
+        const requestedBy = req.user.userId;
+        
+        if (!hallId || !startTime || !endTime) {
             return res.status(400).json({
                 status: false,
-                message: 'hallId, requestedBy, startTime, and endTime are all required',
+                message: 'hallId, startTime, and endTime are all required',
             });
 
         }
@@ -47,7 +49,6 @@ const createBooking = async (req, res) => {
         });
     }
 }
-
 const getBookingById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -107,14 +108,7 @@ const getBookingsByHall = async (req, res) => {
 const approveBooking = async (req, res) => {
     try {
         const { id } = req.params;
-        const { actingUserId } = req.body;
-
-        if (!actingUserId) {
-            return res.status(400).json({
-                status: false,
-                message: 'actingUserId is required'
-            });
-        }
+        const actingUserId = req.user.userId;
 
         const booking = await prisma.$transaction(async (tx) => {
             const updated = await tx.$queryRaw`
@@ -162,18 +156,10 @@ const approveBooking = async (req, res) => {
         });
     }
 }
-
 const rejectBooking = async (req, res) => {
     try {
         const { id } = req.params;
-        const { actingUserId } = req.body;
-
-        if (!actingUserId) {
-            return res.status(400).json({
-                status: false,
-                message: 'actingUserId is required'
-            });
-        }
+        const actingUserId = req.user.userId;
 
         const booking = await prisma.$transaction(async (tx) => {
             const updated = await tx.$queryRaw`

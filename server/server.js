@@ -10,7 +10,7 @@ const rateLimit = require('express-rate-limit');
 const hallsRouter = require('./routes/halls.routes');
 const bookingRouter = require('./routes/bookings.routes');
 const organizationsRouter = require('./routes/organizations.routes');
-
+const authRouter = require('./routes/auth.routes');
 
 
 
@@ -39,7 +39,7 @@ app.get('/health', (req, res) => {
 app.use('/halls', hallsRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/organizations", organizationsRouter);
-
+app.use("/api/auth", authRouter);
 
 
 const PORT = process.env.PORT || 4000;

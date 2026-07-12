@@ -6,6 +6,7 @@ CREATE TABLE users (
     name          TEXT NOT NULL,
     email         TEXT UNIQUE NOT NULL,
     phone         TEXT,
+    password_hash TEXT NOT NULL DEFAULT '',
     created_at    TIMESTAMPTZ DEFAULT now()
 );
 
