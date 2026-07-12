@@ -1,4 +1,5 @@
 const prisma = require('../lib/prismaClient');
+const redis = require('../lib/redisClient');
 const { findSameHallSameDaySlots, findDifferentHallSameTime, findSameHallNextDays } = require('../utils/suggestionLogic');
 
 const createBooking = async (req, res) => {
@@ -248,12 +249,9 @@ const getSuggestions = async (req, res) => {
             return res.status(200).json({ status: true, message: 'No suggestions available', suggestions: [] });
         }
 
-        for (const sugg of suggestions) {
-            await prisma.$queryRaw`
-                INSERT INTO suggestion_holds (hall_id, time_range, held_for_booking_id)
-                VALUES (${sugg.hall_id}::uuid, tstzrange(${sugg.start_time}::timestamptz, ${sugg.end_time}::timestamptz), ${id}::uuid)
-            `;
-        }
+        // Save suggestions to Redis with a 5-minute TTL (300 seconds)
+        const cacheKey = `holds:booking:${id}`;
+        await redis.set(cacheKey, JSON.stringify(suggestions), 'EX', 300);
 
         return res.status(200).json({ status: true, suggestions });
     } catch (error) {
@@ -275,15 +273,18 @@ const acceptSuggestion = async (req, res) => {
             return res.status(403).json({ status: false, message: 'Forbidden' });
         }
 
-        const holds = await prisma.$queryRaw`
-            SELECT id FROM suggestion_holds 
-            WHERE held_for_booking_id = ${id}::uuid 
-            AND hall_id = ${hallId}::uuid 
-            AND time_range = tstzrange(${startTime}::timestamptz, ${endTime}::timestamptz)
-            AND expires_at > now()
-        `;
+        // Validate suggestion hold against Redis
+        const cacheKey = `holds:booking:${id}`;
+        const holdsStr = await redis.get(cacheKey);
+        const holds = holdsStr ? JSON.parse(holdsStr) : [];
+        
+        const validHold = holds.find(h => 
+            h.hall_id === hallId && 
+            new Date(h.start_time).getTime() === new Date(startTime).getTime() && 
+            new Date(h.end_time).getTime() === new Date(endTime).getTime()
+        );
 
-        if (holds.length === 0) {
+        if (!validHold) {
             return res.status(400).json({ status: false, message: 'Suggestion hold expired or invalid' });
         }
 

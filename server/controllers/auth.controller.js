@@ -59,12 +59,18 @@ const signup = async (req, res) => {
 
         const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin);
 
+        res.cookie('refreshToken', refreshToken, { 
+            httpOnly: true, 
+            secure: process.env.NODE_ENV === 'production', 
+            sameSite: 'lax', 
+            maxAge: 7 * 24 * 60 * 60 * 1000 
+        });
+
         return res.status(201).json({
             status: true,
             message: 'Account created successfully',
             user: { id: user.id, name: user.name, email: user.email, isSuperAdmin },
-            token,
-            refreshToken
+            token
         });
 
     } catch (error) {
@@ -116,12 +122,18 @@ const login = async (req, res) => {
 
         const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin);
 
+        res.cookie('refreshToken', refreshToken, { 
+            httpOnly: true, 
+            secure: process.env.NODE_ENV === 'production', 
+            sameSite: 'lax', 
+            maxAge: 7 * 24 * 60 * 60 * 1000 
+        });
+
         return res.status(200).json({
             status: true,
             message: 'Login successful',
             user: { id: user.id, name: user.name, email: user.email, isSuperAdmin },
-            token,
-            refreshToken
+            token
         });
 
     } catch (error) {
@@ -137,9 +149,9 @@ const login = async (req, res) => {
 
 const refresh = async (req, res) => {
     try {
-        const { refreshToken } = req.body;
+        const refreshToken = req.cookies.refreshToken;
         if (!refreshToken) {
-            return res.status(400).json({ status: false, message: 'refreshToken is required' });
+            return res.status(401).json({ status: false, message: 'refreshToken cookie is required' });
         }
 
         const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -181,11 +193,17 @@ const refresh = async (req, res) => {
         // Generate new pair
         const newTokens = await generateTokens(user.id, user.email, isSuperAdmin);
 
+        res.cookie('refreshToken', newTokens.refreshToken, { 
+            httpOnly: true, 
+            secure: process.env.NODE_ENV === 'production', 
+            sameSite: 'lax', 
+            maxAge: 7 * 24 * 60 * 60 * 1000 
+        });
+
         return res.status(200).json({
             status: true,
             message: 'Token refreshed successfully',
-            token: newTokens.token,
-            refreshToken: newTokens.refreshToken
+            token: newTokens.token
         });
 
     } catch (error) {
@@ -195,9 +213,9 @@ const refresh = async (req, res) => {
 
 const logout = async (req, res) => {
     try {
-        const { refreshToken } = req.body;
+        const refreshToken = req.cookies.refreshToken;
         if (!refreshToken) {
-            return res.status(400).json({ status: false, message: 'refreshToken is required' });
+            return res.status(400).json({ status: false, message: 'refreshToken cookie is required' });
         }
 
         const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -207,6 +225,7 @@ const logout = async (req, res) => {
             WHERE token_hash = ${tokenHash}
         `;
 
+        res.clearCookie('refreshToken');
         return res.status(200).json({ status: true, message: 'Logged out successfully' });
     } catch (error) {
         return res.status(500).json({ status: false, message: 'Error logging out', error: error.message });
