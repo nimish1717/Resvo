@@ -59,6 +59,8 @@ CREATE TABLE bookings (
     time_range        TSTZRANGE NOT NULL,
     response_deadline TIMESTAMPTZ DEFAULT now() + interval '48 hours',
     suggestion_round  INT DEFAULT 0,
+    reason            TEXT,
+    superseded_by     UUID REFERENCES bookings(id),
     created_at        TIMESTAMPTZ DEFAULT now(),
 
     -- The core guarantee: no two approved/active bookings can overlap on the same hall
@@ -66,6 +68,14 @@ CREATE TABLE bookings (
         hall_id WITH =,
         time_range WITH &&
     ) WHERE (status IN ('approved','active'))
+);
+
+CREATE TABLE suggestion_holds (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hall_id             UUID NOT NULL REFERENCES halls(id),
+    time_range          TSTZRANGE NOT NULL,
+    held_for_booking_id UUID NOT NULL REFERENCES bookings(id),
+    expires_at          TIMESTAMPTZ NOT NULL DEFAULT now() + interval '5 minutes'
 );
 
 CREATE TABLE booking_actions (
@@ -77,10 +87,11 @@ CREATE TABLE booking_actions (
 );
 
 CREATE TABLE refresh_tokens (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES users(id),
-    token_hash  TEXT NOT NULL,
-    expires_at  TIMESTAMPTZ NOT NULL,
-    revoked     BOOLEAN NOT NULL DEFAULT false,
-    created_at  TIMESTAMPTZ DEFAULT now()
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id        UUID NOT NULL REFERENCES users(id),
+    token_hash     TEXT NOT NULL,
+    expires_at     TIMESTAMPTZ NOT NULL,
+    revoked        BOOLEAN NOT NULL DEFAULT false,
+    revoked_reason TEXT CHECK (revoked_reason IN ('rotated', 'logged_out')),
+    created_at     TIMESTAMPTZ DEFAULT now()
 );

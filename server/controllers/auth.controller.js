@@ -144,7 +144,7 @@ const refresh = async (req, res) => {
 
         const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
         const tokens = await prisma.$queryRaw`
-            SELECT id, user_id, revoked, expires_at 
+            SELECT id, user_id, revoked, revoked_reason, expires_at 
             FROM refresh_tokens 
             WHERE token_hash = ${tokenHash}
         `;
@@ -160,14 +160,16 @@ const refresh = async (req, res) => {
             return res.status(401).json({ status: false, message: 'Refresh token expired' });
         }
 
-        // Theft Detection
-        if (dbToken.revoked) {
+        // Theft Detection: only if it was revoked due to rotation
+        if (dbToken.revoked && dbToken.revoked_reason === 'rotated') {
             await prisma.$queryRaw`UPDATE refresh_tokens SET revoked = true WHERE user_id = ${dbToken.user_id}::uuid`;
             return res.status(401).json({ status: false, message: 'Token theft detected. All sessions revoked.' });
+        } else if (dbToken.revoked) {
+            return res.status(401).json({ status: false, message: 'Invalid or expired refresh token' });
         }
 
         // Token is valid: Revoke it for rotation
-        await prisma.$queryRaw`UPDATE refresh_tokens SET revoked = true WHERE id = ${dbToken.id}::uuid`;
+        await prisma.$queryRaw`UPDATE refresh_tokens SET revoked = true, revoked_reason = 'rotated' WHERE id = ${dbToken.id}::uuid`;
 
         // Get user details
         const users = await prisma.$queryRaw`SELECT id, email FROM users WHERE id = ${dbToken.user_id}::uuid`;
@@ -201,7 +203,7 @@ const logout = async (req, res) => {
         const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
         await prisma.$queryRaw`
             UPDATE refresh_tokens 
-            SET revoked = true 
+            SET revoked = true, revoked_reason = 'logged_out'
             WHERE token_hash = ${tokenHash}
         `;
 

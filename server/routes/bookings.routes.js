@@ -9,6 +9,9 @@ const {
     getBookingsByHall,
     approveBooking,
     rejectBooking,
+    getSuggestions,
+    acceptSuggestion,
+    declineSuggestions,
 } = require('../controllers/bookings.controller');
 
 const resolveOrgFromBookingId = async (req) => {
@@ -30,5 +33,9 @@ router.get('/:id', requireAuth, getBookingById);
 router.post('/:id/approve', requireAuth, requireRole('org_admin', resolveOrgFromBookingId), approveBooking);
 
 router.post('/:id/reject', requireAuth, requireRole('org_admin', resolveOrgFromBookingId), rejectBooking);
+
+router.get('/:id/suggestions', requireAuth, getSuggestions);
+router.post('/:id/accept-suggestion', requireAuth, acceptSuggestion);
+router.post('/:id/decline-suggestions', requireAuth, declineSuggestions);
 
 module.exports = router;

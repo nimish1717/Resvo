@@ -28,23 +28,29 @@ model bookings {
   response_deadline DateTime?                @default(dbgenerated("(now() + '48:00:00'::interval)")) @db.Timestamptz(6)
   suggestion_round  Int?                     @default(0)
   created_at        DateTime?                @default(now()) @db.Timestamptz(6)
+  reason            String?
+  superseded_by     String?                  @db.Uuid
   booking_actions   booking_actions[]
   halls             halls                    @relation(fields: [hall_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users             users                    @relation(fields: [requested_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bookings          bookings?                @relation("bookingsTobookings", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_bookings    bookings[]               @relation("bookingsTobookings")
+  suggestion_holds  suggestion_holds[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model halls {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organization_id String        @db.Uuid
-  name            String
-  location_area   String
-  capacity        Int
-  venue_tier      String
-  price_per_slot  Decimal       @db.Decimal
-  created_at      DateTime?     @default(now()) @db.Timestamptz(6)
-  bookings        bookings[]
-  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization_id  String             @db.Uuid
+  name             String
+  location_area    String
+  capacity         Int
+  venue_tier       String
+  price_per_slot   Decimal            @db.Decimal
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  bookings         bookings[]
+  organizations    organizations      @relation(fields: [organization_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suggestion_holds suggestion_holds[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -102,11 +108,22 @@ model organization_join_requests {
 }
 
 model refresh_tokens {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String    @db.Uuid
-  token_hash String
-  expires_at DateTime  @db.Timestamptz(6)
-  revoked    Boolean   @default(false)
-  created_at DateTime? @default(now()) @db.Timestamptz(6)
-  users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String    @db.Uuid
+  token_hash     String
+  expires_at     DateTime  @db.Timestamptz(6)
+  revoked        Boolean   @default(false)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  revoked_reason String?
+  users          users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model suggestion_holds {
+  id                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hall_id             String                   @db.Uuid
+  time_range          Unsupported("tstzrange")
+  held_for_booking_id String                   @db.Uuid
+  expires_at          DateTime                 @default(dbgenerated("(now() + '00:05:00'::interval)")) @db.Timestamptz(6)
+  halls               halls                    @relation(fields: [hall_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bookings            bookings                 @relation(fields: [held_for_booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
