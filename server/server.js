@@ -45,7 +45,7 @@ app.get('/health', (req, res) => {
 });
 
 
-app.use('/halls', hallsRouter);
+app.use('/api/halls', hallsRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/organizations", organizationsRouter);
 app.use("/api/auth", authRouter);
