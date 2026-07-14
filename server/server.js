@@ -12,11 +12,13 @@ const hallsRouter = require('./routes/halls.routes');
 const bookingRouter = require('./routes/bookings.routes');
 const organizationsRouter = require('./routes/organizations.routes');
 const authRouter = require('./routes/auth.routes');
-
+const { startTokenCleanupWorker } = require('./services/tokenCleanupWorker');
 
 
 
 const app = express();
+
+startTokenCleanupWorker();
 
 app.use(helmet());
 app.use(morgan('dev'));

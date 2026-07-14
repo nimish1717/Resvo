@@ -1,6 +1,7 @@
 const prisma = require('../lib/prismaClient');
 const redis = require('../lib/redisClient');
 const { getCachedHalls, setCachedHalls, invalidateHallsCache } = require('../lib/cache');
+const cloudinary = require('../lib/cloudinary');
 
 async function getAllHalls(req, res) {
     try {
@@ -60,6 +61,13 @@ const createHall = async (req, res) => {
     try {
         const { organizationId, name, locationArea, capacity, venueTier, pricePerSlot } = req.body;
 
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ status: false, message: 'At least 1 photo is required' });
+        }
+        if (req.files.length > 2) {
+            return res.status(400).json({ status: false, message: 'Maximum 2 photos allowed' });
+        }
+
         if (!organizationId || !name || !locationArea || !capacity || !venueTier || !pricePerSlot) {
             return res.status(400).json({
                 status: false,
@@ -83,14 +91,31 @@ const createHall = async (req, res) => {
             });
         }
 
+        // Upload images to Cloudinary
+        const uploadPromises = req.files.map(file => {
+            return new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    { folder: 'resvo_halls' },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result.secure_url);
+                    }
+                );
+                stream.end(file.buffer);
+            });
+        });
+        
+        const photoUrls = await Promise.all(uploadPromises);
+
         const hall = await prisma.halls.create({
             data: {
                 organization_id: organizationId,
                 name,
                 location_area: locationArea,
-                capacity,
+                capacity: parseInt(capacity, 10),
                 venue_tier: venueTier,
-                price_per_slot: pricePerSlot,
+                price_per_slot: parseFloat(pricePerSlot),
+                photos: photoUrls,
             },
         });
 
@@ -143,7 +168,7 @@ const searchHalls = async (req, res) => {
             AND NOT EXISTS (
                 SELECT 1 FROM bookings b
                 WHERE b.hall_id = h.id
-                AND b.status IN ('approved', 'active')
+                AND b.status IN ('approved', 'checked_in')
                 AND b.time_range && tstzrange(${dayStart}::timestamptz, ${dayEnd}::timestamptz)
             )
         `;

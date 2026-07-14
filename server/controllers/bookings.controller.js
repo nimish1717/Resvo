@@ -253,6 +253,22 @@ const getSuggestions = async (req, res) => {
             return res.status(200).json({ status: true, message: 'No suggestions available', suggestions: [] });
         }
 
+        // Attach hall_name to suggestions
+        const hallIds = [...new Set(suggestions.map(s => s.hall_id))];
+        const halls = await prisma.halls.findMany({
+            where: { id: { in: hallIds } },
+            select: { id: true, name: true }
+        });
+        const hallNameMap = halls.reduce((acc, h) => {
+            acc[h.id] = h.name;
+            return acc;
+        }, {});
+
+        suggestions = suggestions.map(s => ({
+            ...s,
+            hall_name: hallNameMap[s.hall_id] || 'Unknown Hall'
+        }));
+
         // Save suggestions to Redis with a 5-minute TTL (300 seconds)
         const cacheKey = `holds:booking:${id}`;
         await redis.set(cacheKey, JSON.stringify(suggestions), 'EX', 300);
@@ -342,6 +358,176 @@ const declineSuggestions = async (req, res) => {
     }
 }
 
+const checkInBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const actingUserId = req.user.userId;
+
+        const booking = await prisma.$transaction(async (tx) => {
+            const updated = await tx.$queryRaw`
+                UPDATE bookings
+                SET status = 'checked_in'
+                WHERE id = ${id}::uuid AND status = 'approved'
+                RETURNING id, hall_id, requested_by, status, time_range::text;
+            `;
+
+            if (updated.length === 0) {
+                throw new Error('BOOKING_NOT_FOUND_OR_NOT_APPROVED');
+            }
+
+            await tx.$executeRaw`
+                INSERT INTO booking_actions (booking_id, acting_user_id, action)
+                VALUES (${id}::uuid, ${actingUserId}::uuid, 'checked_in');
+            `;
+
+            return updated[0];
+        });
+
+        res.status(200).json({ status: true, message: 'Booking checked in', booking });
+    } catch (error) {
+        if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_APPROVED') {
+            return res.status(404).json({
+                status: false,
+                message: 'Booking not found, or it is not in approved state',
+            });
+        }
+        return res.status(500).json({
+            status: false,
+            message: 'Something went wrong while checking in the booking',
+            error: error.message
+        });
+    }
+}
+
+const noShowBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const actingUserId = req.user.userId;
+
+        const booking = await prisma.$transaction(async (tx) => {
+            const updated = await tx.$queryRaw`
+                UPDATE bookings
+                SET status = 'no_show'
+                WHERE id = ${id}::uuid AND status = 'approved'
+                RETURNING id, hall_id, requested_by, status, time_range::text;
+            `;
+
+            if (updated.length === 0) {
+                throw new Error('BOOKING_NOT_FOUND_OR_NOT_APPROVED');
+            }
+
+            await tx.$executeRaw`
+                INSERT INTO booking_actions (booking_id, acting_user_id, action)
+                VALUES (${id}::uuid, ${actingUserId}::uuid, 'no_show');
+            `;
+
+            return updated[0];
+        });
+
+        await invalidateSearchCache();
+
+        res.status(200).json({ status: true, message: 'Booking marked as no-show', booking });
+    } catch (error) {
+        if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_APPROVED') {
+            return res.status(404).json({
+                status: false,
+                message: 'Booking not found, or it is not in approved state',
+            });
+        }
+        return res.status(500).json({
+            status: false,
+            message: 'Something went wrong while marking as no-show',
+            error: error.message
+        });
+    }
+}
+
+const completeBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const actingUserId = req.user.userId;
+
+        const booking = await prisma.$transaction(async (tx) => {
+            const updated = await tx.$queryRaw`
+                UPDATE bookings
+                SET status = 'completed'
+                WHERE id = ${id}::uuid AND status IN ('approved', 'checked_in')
+                RETURNING id, hall_id, requested_by, status, time_range::text;
+            `;
+
+            if (updated.length === 0) {
+                throw new Error('BOOKING_NOT_FOUND_OR_NOT_VALID_STATE');
+            }
+
+            await tx.$executeRaw`
+                INSERT INTO booking_actions (booking_id, acting_user_id, action)
+                VALUES (${id}::uuid, ${actingUserId}::uuid, 'completed');
+            `;
+
+            return updated[0];
+        });
+
+        await invalidateSearchCache();
+
+        res.status(200).json({ status: true, message: 'Booking completed', booking });
+    } catch (error) {
+        if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_VALID_STATE') {
+            return res.status(404).json({
+                status: false,
+                message: 'Booking not found, or it is not in approved or checked_in state',
+            });
+        }
+        return res.status(500).json({
+            status: false,
+            message: 'Something went wrong while completing the booking',
+            error: error.message
+        });
+    }
+}
+
+const cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const actingUserId = req.user.userId;
+
+        const booking = await prisma.$transaction(async (tx) => {
+            const updated = await tx.$queryRaw`
+                UPDATE bookings
+                SET status = 'cancelled'
+                WHERE id = ${id}::uuid AND status IN ('requested', 'approved', 'checked_in')
+                RETURNING id, hall_id, requested_by, status, time_range::text;
+            `;
+
+            if (updated.length === 0) {
+                throw new Error('BOOKING_NOT_FOUND_OR_NOT_VALID_STATE');
+            }
+
+            await tx.$executeRaw`
+                INSERT INTO booking_actions (booking_id, acting_user_id, action)
+                VALUES (${id}::uuid, ${actingUserId}::uuid, 'cancelled');
+            `;
+
+            return updated[0];
+        });
+
+        await invalidateSearchCache();
+
+        res.status(200).json({ status: true, message: 'Booking cancelled', booking });
+    } catch (error) {
+        if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_VALID_STATE') {
+            return res.status(404).json({
+                status: false,
+                message: 'Booking not found, or it is already in a terminal state',
+            });
+        }
+        return res.status(500).json({
+            status: false,
+            message: 'Something went wrong while cancelling the booking',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     createBooking,
     getBookingById,
@@ -350,5 +536,9 @@ module.exports = {
     rejectBooking,
     getSuggestions,
     acceptSuggestion,
-    declineSuggestions
+    declineSuggestions,
+    checkInBooking,
+    noShowBooking,
+    completeBooking,
+    cancelBooking
 }

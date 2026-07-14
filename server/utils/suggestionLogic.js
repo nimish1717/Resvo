@@ -22,7 +22,7 @@ const findSameHallSameDaySlots = async (hallId, requestedStartTime, requestedEnd
         SELECT lower(time_range) as start_time, upper(time_range) as end_time
         FROM bookings
         WHERE hall_id = ${hallId}::uuid
-        AND status IN ('approved', 'active')
+        AND status IN ('approved', 'checked_in')
         AND time_range && tstzrange(${dayStart.toISOString()}::timestamptz, ${dayEnd.toISOString()}::timestamptz)
         ORDER BY start_time ASC
     `;
@@ -73,7 +73,7 @@ const findDifferentHallSameTime = async (organizationId, originalHallId, request
         AND NOT EXISTS (
             SELECT 1 FROM bookings b
             WHERE b.hall_id = h.id
-            AND b.status IN ('approved', 'active')
+            AND b.status IN ('approved', 'checked_in')
             AND b.time_range && tstzrange(${reqStart}::timestamptz, ${reqEnd}::timestamptz)
         )
         LIMIT 2;
@@ -103,7 +103,7 @@ const findSameHallNextDays = async (hallId, requestedStartTime, requestedEndTime
         const overlap = await prisma.$queryRaw`
             SELECT 1 FROM bookings
             WHERE hall_id = ${hallId}::uuid
-            AND status IN ('approved', 'active')
+            AND status IN ('approved', 'checked_in')
             AND time_range && tstzrange(${c.start.toISOString()}::timestamptz, ${c.end.toISOString()}::timestamptz)
             LIMIT 1
         `;
