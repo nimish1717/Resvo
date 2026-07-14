@@ -59,4 +59,23 @@ const invalidateHallsCache = async () => {
     }
 };
 
-module.exports = { getCachedHalls, setCachedHalls, invalidateHallsCache };
+const invalidateSearchCache = async () => {
+    try {
+        const keys = await redis.keys("halls:search:*");
+        if (keys.length > 0) {
+            await redis.unlink(keys);
+        }
+        return {
+            status: true,
+            message: 'Search cache invalidated successfully'
+        };
+    } catch (err) {
+        return {
+            status: false,
+            message: 'Redis search invalidation error',
+            error: err.message
+        };
+    }
+};
+
+module.exports = { getCachedHalls, setCachedHalls, invalidateHallsCache, invalidateSearchCache };

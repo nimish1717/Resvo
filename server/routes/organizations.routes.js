@@ -6,6 +6,7 @@ const prisma = require('../lib/prismaClient');
 
 const {
     createOrganization,
+    getMyOrganizations,
     getPendingOrganizations,
     approveOrganization,
     rejectOrganization,
@@ -28,15 +29,16 @@ const resolveOrgFromRequestId = async (req) => {
 };
 
 router.post('/', requireAuth, createOrganization);
+router.get('/mine', requireAuth, getMyOrganizations);
 router.get('/pending', requireAuth, requireRole('super_admin'), getPendingOrganizations);
 router.post('/:id/approve', requireAuth, requireRole('super_admin'), approveOrganization);
 router.post('/:id/reject', requireAuth, requireRole('super_admin'), rejectOrganization);
 router.post('/:id/request-changes', requireAuth, requireRole('super_admin'), requestChangesOrganization);
 
-router.post('/:id/invite-code', requireAuth, requireRole('org_admin', resolveOrgFromParams), generateInviteCode);
+router.post('/:id/invite-code', requireAuth, requireRole('org_owner', resolveOrgFromParams), generateInviteCode);
 router.post('/join', requireAuth, joinOrganization);
-router.get('/:id/join-requests', requireAuth, requireRole('org_admin', resolveOrgFromParams), getJoinRequests);
-router.post('/join-requests/:requestId/approve', requireAuth, requireRole('org_admin', resolveOrgFromRequestId), approveJoinRequest);
-router.post('/join-requests/:requestId/reject', requireAuth, requireRole('org_admin', resolveOrgFromRequestId), rejectJoinRequest);
+router.get('/:id/join-requests', requireAuth, requireRole('org_owner', resolveOrgFromParams), getJoinRequests);
+router.post('/join-requests/:requestId/approve', requireAuth, requireRole('org_owner', resolveOrgFromRequestId), approveJoinRequest);
+router.post('/join-requests/:requestId/reject', requireAuth, requireRole('org_owner', resolveOrgFromRequestId), rejectJoinRequest);
 
 module.exports = router;

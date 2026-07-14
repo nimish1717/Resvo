@@ -5,9 +5,9 @@ const requireAuth = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ 
+        return res.status(401).json({
             status: false,
-            message: 'Missing or malformed Authorization header' 
+            message: 'Missing or malformed Authorization header'
         });
     }
 
@@ -18,9 +18,9 @@ const requireAuth = (req, res, next) => {
         req.user = decoded;
         next();
     } catch (err) {
-        return res.status(401).json({ 
+        return res.status(401).json({
             status: false,
-            message: 'Invalid or expired token' 
+            message: 'Invalid or expired token'
         });
     }
 }
@@ -30,21 +30,21 @@ const requireRole = (role, resolveOrganizationId) => {
         try {
             if (role === 'super_admin') {
                 if (!req.user?.isSuperAdmin) {
-                    return res.status(403).json({ 
+                    return res.status(403).json({
                         status: false,
-                        message: 'Super Admin access required' 
+                        message: 'Super Admin access required'
                     });
                 }
                 return next();
             }
 
-            if (role === 'org_admin') {
+            if (role === 'org_admin' || role === 'org_owner') {
                 const organizationId = await resolveOrganizationId(req);
 
                 if (!organizationId) {
-                    return res.status(404).json({ 
+                    return res.status(404).json({
                         status: false,
-                        message: 'Could not determine the organization for this request' 
+                        message: 'Could not determine the organization for this request'
                     });
                 }
 
@@ -58,9 +58,16 @@ const requireRole = (role, resolveOrganizationId) => {
                 });
 
                 if (!membership) {
-                    return res.status(403).json({ 
+                    return res.status(403).json({
                         status: false,
-                        message: 'You do not have admin access to this organization' 
+                        message: 'You do not have admin access to this organization'
+                    });
+                }
+
+                if (role === 'org_owner' && membership.role !== 'org_admin') {
+                    return res.status(403).json({
+                        status: false,
+                        message: 'Only the Organization Admin can manage membership'
                     });
                 }
 
@@ -74,9 +81,9 @@ const requireRole = (role, resolveOrganizationId) => {
             });
         } catch (err) {
             console.error('Error checking role:', err);
-            return res.status(500).json({ 
+            return res.status(500).json({
                 status: false,
-                message: 'Something went wrong while checking permissions' 
+                message: 'Something went wrong while checking permissions'
             });
         }
     };

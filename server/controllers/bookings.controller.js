@@ -1,5 +1,6 @@
 const prisma = require('../lib/prismaClient');
 const redis = require('../lib/redisClient');
+const { invalidateSearchCache } = require('../lib/cache');
 const { findSameHallSameDaySlots, findDifferentHallSameTime, findSameHallNextDays } = require('../utils/suggestionLogic');
 
 const createBooking = async (req, res) => {
@@ -134,6 +135,9 @@ const approveBooking = async (req, res) => {
 
             return updated[0];
         });
+
+        // Invalidate search cache because availability changed
+        await invalidateSearchCache();
 
         res.status(200).json({ status: true, message: 'Booking approved', booking });
     } catch (error) {

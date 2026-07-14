@@ -1,4 +1,5 @@
 const prisma = require('../lib/prismaClient');
+const redis = require('../lib/redisClient');
 const { getCachedHalls, setCachedHalls, invalidateHallsCache } = require('../lib/cache');
 
 async function getAllHalls(req, res) {
@@ -31,6 +32,30 @@ async function getAllHalls(req, res) {
     }
 }
 
+async function getHallById(req, res) {
+    const { id } = req.params;
+
+    try {
+        const hall = await prisma.halls.findFirst({
+            where: {
+                id,
+                organizations: {
+                    status: 'approved',
+                },
+            },
+        });
+
+        if (!hall) {
+            return res.status(404).json({ error: 'Hall not found' });
+        }
+
+        res.json({ hall });
+    } catch (err) {
+        console.error('Error fetching hall:', err);
+        res.status(500).json({ error: 'Something went wrong while fetching the hall' });
+    }
+}
+
 const createHall = async (req, res) => {
     try {
         const { organizationId, name, locationArea, capacity, venueTier, pricePerSlot } = req.body;
@@ -44,17 +69,17 @@ const createHall = async (req, res) => {
 
         const validTiers = ['budget', 'standard', 'premium'];
         if (!validTiers.includes(venueTier)) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 status: false,
-                message: `venueTier must be one of: ${validTiers.join(', ')}` 
+                message: `venueTier must be one of: ${validTiers.join(', ')}`
             });
         }
 
         const organization = await prisma.organizations.findUnique({ where: { id: organizationId } });
         if (!organization) {
-            return res.status(404).json({ 
+            return res.status(404).json({
                 status: false,
-                message: 'Organization not found' 
+                message: 'Organization not found'
             });
         }
 
@@ -72,14 +97,14 @@ const createHall = async (req, res) => {
         // Invalidate halls cache because a new hall was created
         await invalidateHallsCache();
 
-        return res.status(201).json({ 
+        return res.status(201).json({
             status: true,
             message: 'Hall created successfully',
-            hall 
+            hall
         });
     } catch (err) {
         console.error('Error creating hall:', err);
-        return res.status(500).json({ 
+        return res.status(500).json({
             status: false,
             message: 'Something went wrong while creating the hall',
             error: err.message
@@ -94,9 +119,8 @@ const searchHalls = async (req, res) => {
             return res.status(400).json({ status: false, message: 'date, capacity, and venueTier are required' });
         }
 
-        const redis = require('../lib/redisClient');
         const cacheKey = `halls:search:date=${date}:cap=${capacity}:tier=${venueTier}`;
-        
+
         try {
             const cached = await redis.get(cacheKey);
             if (cached) {
@@ -119,7 +143,7 @@ const searchHalls = async (req, res) => {
             AND NOT EXISTS (
                 SELECT 1 FROM bookings b
                 WHERE b.hall_id = h.id
-                AND b.status = 'approved'
+                AND b.status IN ('approved', 'active')
                 AND b.time_range && tstzrange(${dayStart}::timestamptz, ${dayEnd}::timestamptz)
             )
         `;
@@ -140,5 +164,6 @@ const searchHalls = async (req, res) => {
 module.exports = {
     getAllHalls,
     createHall,
-    searchHalls
+    searchHalls,
+    getHallById
 };

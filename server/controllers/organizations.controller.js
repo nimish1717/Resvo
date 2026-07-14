@@ -6,14 +6,14 @@ const createOrganization = async (req, res) => {
     try {
         const { name } = req.body;
         const ownerUserId = req.user.userId;
-        
+
         if (!name) {
             return res.status(400).json({
                 status: false,
                 message: 'name is required'
             });
         }
-        
+
         const organization = await prisma.$transaction(async (tx) => {
             const org = await tx.organizations.create({
                 data: {
@@ -21,7 +21,7 @@ const createOrganization = async (req, res) => {
                     name,
                 },
             });
-            
+
             await tx.organization_members.create({
                 data: {
                     organization_id: org.id,
@@ -29,7 +29,7 @@ const createOrganization = async (req, res) => {
                     role: 'org_admin'
                 }
             });
-            
+
             return org;
         });
         return res.status(201).json({
@@ -44,6 +44,29 @@ const createOrganization = async (req, res) => {
             message: 'Something went wrong while creating the organization',
             error: error.message
         });
+    }
+}
+
+const getMyOrganizations = async (req, res) => {
+    try {
+        const memberships = await prisma.organization_members.findMany({
+            where: { user_id: req.user.userId },
+            include: {
+                organizations: {
+                    include: { halls: true },
+                },
+            },
+        });
+
+        const organizations = memberships.map((m) => ({
+            ...m.organizations,
+            myRole: m.role,
+        }));
+
+        res.json({ organizations });
+    } catch (err) {
+        console.error('Error fetching my organizations:', err);
+        res.status(500).json({ error: 'Something went wrong while fetching your organizations' });
     }
 }
 
@@ -165,18 +188,18 @@ const generateInviteCode = async (req, res) => {
     try {
         const { id } = req.params;
         const inviteCode = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 char string
-        
+
         const updated = await prisma.$queryRaw`
             UPDATE organizations 
             SET invite_code = ${inviteCode}, invite_code_expires_at = now() + interval '5 minutes'
             WHERE id = ${id}::uuid
             RETURNING id, name, invite_code, invite_code_expires_at;
         `;
-        
+
         if (updated.length === 0) {
             return res.status(404).json({ status: false, message: 'Organization not found' });
         }
-        
+
         return res.status(200).json({ status: true, message: 'Invite code generated', organization: updated[0] });
     } catch (error) {
         return res.status(500).json({ status: false, message: 'Error generating invite code', error: error.message });
@@ -187,29 +210,29 @@ const joinOrganization = async (req, res) => {
     try {
         const { inviteCode } = req.body;
         const userId = req.user.userId;
-        
+
         if (!inviteCode) {
             return res.status(400).json({ status: false, message: 'inviteCode is required' });
         }
-        
+
         const orgs = await prisma.$queryRaw`
             SELECT id FROM organizations 
             WHERE invite_code = ${inviteCode} AND invite_code_expires_at > now()
         `;
-        
+
         if (orgs.length === 0) {
             return res.status(400).json({ status: false, message: 'Invalid or expired invite code' });
         }
-        
+
         const orgId = orgs[0].id;
-        
+
         const existingMember = await prisma.organization_members.findUnique({
             where: { organization_id_user_id: { organization_id: orgId, user_id: userId } }
         });
         if (existingMember) {
             return res.status(400).json({ status: false, message: 'You are already a member of this organization' });
         }
-        
+
         const request = await prisma.organization_join_requests.create({
             data: {
                 organization_id: orgId,
@@ -217,11 +240,11 @@ const joinOrganization = async (req, res) => {
                 status: 'pending'
             }
         });
-        
+
         return res.status(201).json({ status: true, message: 'Join request submitted', request });
     } catch (error) {
         if (error.code === 'P2002') {
-             return res.status(409).json({ status: false, message: 'You already have a pending request for this organization' });
+            return res.status(409).json({ status: false, message: 'You already have a pending request for this organization' });
         }
         return res.status(500).json({ status: false, message: 'Error submitting join request', error: error.message });
     }
@@ -234,7 +257,7 @@ const getJoinRequests = async (req, res) => {
             where: { organization_id: id, status: 'pending' },
             include: { users: { select: { id: true, name: true, email: true } } }
         });
-        
+
         return res.status(200).json({ status: true, message: 'Join requests fetched', requests });
     } catch (error) {
         return res.status(500).json({ status: false, message: 'Error fetching requests', error: error.message });
@@ -244,7 +267,7 @@ const getJoinRequests = async (req, res) => {
 const approveJoinRequest = async (req, res) => {
     try {
         const { requestId } = req.params;
-        
+
         const result = await prisma.$transaction(async (tx) => {
             const reqRow = await tx.$queryRaw`
                 UPDATE organization_join_requests 
@@ -252,11 +275,11 @@ const approveJoinRequest = async (req, res) => {
                 WHERE id = ${requestId}::uuid AND status = 'pending'
                 RETURNING organization_id, user_id;
             `;
-            
+
             if (reqRow.length === 0) {
                 throw new Error('NOT_FOUND_OR_NOT_PENDING');
             }
-            
+
             await tx.organization_members.create({
                 data: {
                     organization_id: reqRow[0].organization_id,
@@ -264,10 +287,10 @@ const approveJoinRequest = async (req, res) => {
                     role: 'co_admin'
                 }
             });
-            
+
             return reqRow[0];
         });
-        
+
         return res.status(200).json({ status: true, message: 'Join request approved', membership: result });
     } catch (error) {
         if (error.message === 'NOT_FOUND_OR_NOT_PENDING') {
@@ -280,18 +303,18 @@ const approveJoinRequest = async (req, res) => {
 const rejectJoinRequest = async (req, res) => {
     try {
         const { requestId } = req.params;
-        
+
         const reqRow = await prisma.$queryRaw`
             UPDATE organization_join_requests 
             SET status = 'rejected'
             WHERE id = ${requestId}::uuid AND status = 'pending'
             RETURNING id;
         `;
-        
+
         if (reqRow.length === 0) {
-             return res.status(404).json({ status: false, message: 'Request not found or already processed' });
+            return res.status(404).json({ status: false, message: 'Request not found or already processed' });
         }
-        
+
         return res.status(200).json({ status: true, message: 'Join request rejected' });
     } catch (error) {
         return res.status(500).json({ status: false, message: 'Error rejecting request', error: error.message });
@@ -300,6 +323,7 @@ const rejectJoinRequest = async (req, res) => {
 
 module.exports = {
     createOrganization,
+    getMyOrganizations,
     getPendingOrganizations,
     approveOrganization,
     rejectOrganization,
