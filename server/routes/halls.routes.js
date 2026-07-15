@@ -10,6 +10,6 @@ const resolveOrgForHallCreation = (req) => req.body.organizationId;
 router.get('/search', searchHalls);
 router.get('/', getAllHalls);
 router.get('/:id', getHallById);
-router.post('/', requireAuth, requireRole('org_admin', resolveOrgForHallCreation), upload.array('photos', 2), createHall);
+router.post('/', requireAuth, upload.array('photos', 2), requireRole('org_admin', resolveOrgForHallCreation), createHall);
 
 module.exports = router;

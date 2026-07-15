@@ -8,7 +8,7 @@ const router = express.Router();
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
+    limit: process.env.NODE_ENV === 'production' ? 5 : 100,
     standardHeaders: true,
     legacyHeaders: false,
     store: new RedisStore({
@@ -22,7 +22,7 @@ const authLimiter = rateLimit({
 
 const refreshLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 20,
+    limit: process.env.NODE_ENV === 'production' ? 20 : 500,
     standardHeaders: true,
     legacyHeaders: false,
     store: new RedisStore({
