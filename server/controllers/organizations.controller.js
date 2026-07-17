@@ -321,6 +321,111 @@ const rejectJoinRequest = async (req, res) => {
     }
 }
 
+const editOrganization = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+
+        if (!name) {
+            return res.status(400).json({ status: false, message: 'Name is required' });
+        }
+
+        const orgRows = await prisma.$queryRaw`
+            UPDATE organizations 
+            SET name = ${name}
+            WHERE id = ${id}::uuid 
+            RETURNING *;
+        `;
+
+        if (orgRows.length === 0) {
+            return res.status(404).json({ status: false, message: 'Organization not found' });
+        }
+
+        return res.status(200).json({ status: true, message: 'Organization updated successfully', organization: orgRows[0] });
+    } catch (error) {
+        return res.status(500).json({ status: false, message: 'Error updating organization', error: error.message });
+    }
+}
+
+const deleteOrganization = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await prisma.$transaction(async (tx) => {
+            // Delete join requests
+            await tx.$queryRaw`DELETE FROM organization_join_requests WHERE organization_id = ${id}::uuid`;
+            
+            // Delete booking actions
+            await tx.$queryRaw`
+                DELETE FROM booking_actions
+                WHERE booking_id IN (
+                    SELECT b.id FROM bookings b
+                    JOIN halls h ON b.hall_id = h.id
+                    WHERE h.organization_id = ${id}::uuid
+                )
+            `;
+
+            // Delete bookings
+            await tx.$queryRaw`
+                DELETE FROM bookings 
+                WHERE hall_id IN (
+                    SELECT id FROM halls WHERE organization_id = ${id}::uuid
+                )
+            `;
+
+            // Delete halls
+            await tx.$queryRaw`DELETE FROM halls WHERE organization_id = ${id}::uuid`;
+
+            // Delete organization members
+            await tx.$queryRaw`DELETE FROM organization_members WHERE organization_id = ${id}::uuid`;
+
+            // Delete the organization
+            await tx.$queryRaw`DELETE FROM organizations WHERE id = ${id}::uuid`;
+        });
+
+        return res.status(200).json({ status: true, message: 'Organization deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ status: false, message: 'Error deleting organization', error: error.message });
+    }
+}
+
+const removeCoAdmin = async (req, res) => {
+    try {
+        const { id, userId } = req.params;
+
+        const result = await prisma.$queryRaw`
+            DELETE FROM organization_members
+            WHERE organization_id = ${id}::uuid AND user_id = ${userId}::uuid AND role = 'co_admin'
+            RETURNING *;
+        `;
+
+        if (result.length === 0) {
+            return res.status(404).json({ status: false, message: 'Co-Admin not found or could not be removed' });
+        }
+
+        return res.status(200).json({ status: true, message: 'Co-Admin removed successfully' });
+    } catch (error) {
+        return res.status(500).json({ status: false, message: 'Error removing Co-Admin', error: error.message });
+    }
+}
+
+const getMembers = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const members = await prisma.organization_members.findMany({
+            where: { organization_id: id },
+            include: {
+                users: {
+                    select: { id: true, name: true, email: true }
+                }
+            }
+        });
+        return res.status(200).json({ status: true, members });
+    } catch (error) {
+        return res.status(500).json({ status: false, message: 'Error fetching members', error: error.message });
+    }
+}
+
 module.exports = {
     createOrganization,
     getMyOrganizations,
@@ -333,4 +438,8 @@ module.exports = {
     getJoinRequests,
     approveJoinRequest,
     rejectJoinRequest,
+    editOrganization,
+    deleteOrganization,
+    removeCoAdmin,
+    getMembers,
 }

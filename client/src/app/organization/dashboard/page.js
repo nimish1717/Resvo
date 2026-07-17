@@ -21,14 +21,12 @@ export default function OrgDashboardPage() {
     const [joinRequests, setJoinRequests] = useState({});
     const [inviteCodes, setInviteCodes] = useState({});
 
+    // Modals state
+    const [deleteOrg, setDeleteOrg] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     useEffect(() => {
         if (loading || !user) return;
-        async function loadMyOrgs() {
-            const { response, data } = await authFetch('/organizations/mine');
-            if (response.ok) {
-                setOrganizations(data.organizations || []);
-            }
-        }
         loadMyOrgs();
     }, [loading, user]);
 
@@ -93,6 +91,27 @@ export default function OrgDashboardPage() {
         loadJoinRequests(orgId);
     }
 
+    async function loadMyOrgs() {
+        const { response, data } = await authFetch('/organizations/mine');
+        if (response.ok) {
+            setOrganizations(data.organizations || []);
+        }
+    }
+
+    async function handleDeleteSubmit() {
+        setIsSubmitting(true);
+        const { response, data } = await authFetch(`/organizations/${deleteOrg.id}`, {
+            method: 'DELETE'
+        });
+        setIsSubmitting(false);
+        if (response.ok) {
+            setDeleteOrg(null);
+            loadMyOrgs();
+        } else {
+            setError(data?.message || 'Could not delete organization');
+        }
+    }
+
     if (loading) return (
         <div className="flex justify-center items-center h-[60vh]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -152,7 +171,21 @@ export default function OrgDashboardPage() {
                                                     <Building className="w-5 h-5 text-primary" />
                                                 </div>
                                                 <div>
-                                                    <CardTitle className="text-xl">{org.name}</CardTitle>
+                                                    <div className="flex items-center gap-3">
+                                                        <CardTitle className="text-xl">{org.name}</CardTitle>
+                                                        {org.myRole === 'org_admin' && (
+                                                            <div className="flex gap-2">
+                                                                <Link href={`/organization/dashboard/${org.id}`}>
+                                                                    <Button variant="outline" size="sm">
+                                                                        Manage
+                                                                    </Button>
+                                                                </Link>
+                                                                <Button variant="destructive" size="sm" onClick={() => setDeleteOrg(org)}>
+                                                                    Delete
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                     <div className="flex gap-2 mt-1">
                                                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${org.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
                                                             {org.status.charAt(0).toUpperCase() + org.status.slice(1)}
@@ -329,6 +362,27 @@ export default function OrgDashboardPage() {
                     </div>
                 )}
             </div>
+
+            {/* Delete Modal */}
+            {deleteOrg && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <Card className="w-full max-w-md shadow-2xl border-red-500/50">
+                        <CardHeader>
+                            <CardTitle className="text-red-600 flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5" /> Delete Organization
+                            </CardTitle>
+                            <CardDescription>
+                                Are you sure you want to permanently delete <strong>{deleteOrg.name}</strong>? This will delete all its venues, bookings, and team members. This action cannot be undone.
+                            </CardDescription>
+                        </CardHeader>
+                        <div className="flex justify-end gap-2 p-6">
+                            <Button variant="outline" onClick={() => setDeleteOrg(null)} disabled={isSubmitting}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleDeleteSubmit} disabled={isSubmitting}>Yes, Delete Organization</Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
         </div>
     );
 }

@@ -16,6 +16,10 @@ const {
     getJoinRequests,
     approveJoinRequest,
     rejectJoinRequest,
+    editOrganization,
+    deleteOrganization,
+    removeCoAdmin,
+    getMembers,
 } = require('../controllers/organizations.controller');
 
 const resolveOrgFromParams = (req) => req.params.id;
@@ -35,10 +39,15 @@ router.post('/:id/approve', requireAuth, requireRole('super_admin'), approveOrga
 router.post('/:id/reject', requireAuth, requireRole('super_admin'), rejectOrganization);
 router.post('/:id/request-changes', requireAuth, requireRole('super_admin'), requestChangesOrganization);
 
+router.put('/:id', requireAuth, requireRole('org_owner', resolveOrgFromParams), editOrganization);
+router.delete('/:id', requireAuth, requireRole('org_owner', resolveOrgFromParams), deleteOrganization);
+router.delete('/:id/co-admin/:userId', requireAuth, requireRole('org_owner', resolveOrgFromParams), removeCoAdmin);
+
 router.post('/:id/invite-code', requireAuth, requireRole('org_owner', resolveOrgFromParams), generateInviteCode);
 router.post('/join', requireAuth, joinOrganization);
 router.get('/:id/join-requests', requireAuth, requireRole('org_owner', resolveOrgFromParams), getJoinRequests);
 router.post('/join-requests/:requestId/approve', requireAuth, requireRole('org_owner', resolveOrgFromRequestId), approveJoinRequest);
 router.post('/join-requests/:requestId/reject', requireAuth, requireRole('org_owner', resolveOrgFromRequestId), rejectJoinRequest);
+router.get('/:id/members', requireAuth, requireRole('org_owner', resolveOrgFromParams), getMembers);
 
 module.exports = router;

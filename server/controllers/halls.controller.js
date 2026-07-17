@@ -186,9 +186,61 @@ const searchHalls = async (req, res) => {
     }
 }
 
+const updateHall = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, capacity, venueTier, locationArea, pricePerSlot } = req.body;
+        
+        const existing = await prisma.halls.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ status: false, message: 'Hall not found' });
+        }
+
+        const hall = await prisma.halls.update({
+            where: { id },
+            data: {
+                name: name || existing.name,
+                capacity: capacity ? parseInt(capacity) : existing.capacity,
+                venue_tier: venueTier || existing.venue_tier,
+                location_area: locationArea || existing.location_area,
+                price_per_slot: pricePerSlot ? parseFloat(pricePerSlot) : existing.price_per_slot,
+            }
+        });
+
+        await invalidateHallsCache();
+
+        return res.status(200).json({ status: true, message: 'Hall updated successfully', hall });
+    } catch (error) {
+        return res.status(500).json({ status: false, message: 'Error updating hall', error: error.message });
+    }
+}
+
+const deleteHall = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await prisma.$transaction(async (tx) => {
+            // Delete booking actions
+            await tx.$queryRaw`DELETE FROM booking_actions WHERE booking_id IN (SELECT id FROM bookings WHERE hall_id = ${id}::uuid)`;
+            // Delete bookings
+            await tx.$queryRaw`DELETE FROM bookings WHERE hall_id = ${id}::uuid`;
+            // Delete hall
+            await tx.$queryRaw`DELETE FROM halls WHERE id = ${id}::uuid`;
+        });
+
+        await invalidateHallsCache();
+
+        return res.status(200).json({ status: true, message: 'Hall deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ status: false, message: 'Error deleting hall', error: error.message });
+    }
+}
+
 module.exports = {
     getAllHalls,
     createHall,
     searchHalls,
-    getHallById
+    getHallById,
+    updateHall,
+    deleteHall,
 };

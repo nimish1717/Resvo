@@ -40,7 +40,6 @@ export default function Layout({ children }) {
           <Link href="/organization/dashboard" className="p-2 hover:bg-muted rounded-md text-sm">Dashboard</Link>
           <Link href="/organization/halls" className="p-2 hover:bg-muted rounded-md text-sm">My Halls</Link>
           <Link href="/organization/bookings" className="p-2 hover:bg-muted rounded-md text-sm">Bookings</Link>
-          <Link href="/organization/co-admins" className="p-2 hover:bg-muted rounded-md text-sm">Co-Admins</Link>
           <Link href="/organization/analytics" className="p-2 hover:bg-muted rounded-md text-sm">Analytics</Link>
         </aside>
         <main className="flex-1 p-6 overflow-auto">
