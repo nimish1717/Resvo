@@ -42,8 +42,23 @@ const globalLimiter = rateLimit({
 app.use(globalLimiter);
 
 
+const prisma = require('./lib/prismaClient');
+
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'Resvo API is running' });
+});
+
+app.get('/api/stats', async (req, res) => {
+    try {
+        const [halls, organizations, bookings] = await Promise.all([
+            prisma.halls.count(),
+            prisma.organizations.count({ where: { status: 'approved' } }),
+            prisma.bookings.count({ where: { status: { in: ['approved', 'checked_in', 'completed'] } } })
+        ]);
+        res.json({ halls, organizations, bookings });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
 });
 
 
