@@ -41,9 +41,9 @@ export default function Layout({ children }) {
       {/* Sleek Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col relative z-20">
         <div className="p-6 pb-4">
-          <div className="font-extrabold text-2xl tracking-tight text-foreground">
-            Resvo<span className="text-primary">.</span>
-          </div>
+          <Link href="/" className="text-3xl font-serif font-bold tracking-tight text-[#E2C391] hover:opacity-90 transition-opacity block">
+            Resvo
+          </Link>
         </div>
 
         <div className="px-4 pb-4">
@@ -76,8 +76,14 @@ export default function Layout({ children }) {
         </nav>
         
         <div className="p-4 border-t border-border">
-          <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all rounded-md">
-            <LogOut className="w-5 h-5" /> Log out
+          <button 
+              onClick={async () => {
+                  await logout();
+                  router.push('/login');
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
+          >
+            <LogOut className="w-4 h-4" /> Log out
           </button>
         </div>
       </aside>

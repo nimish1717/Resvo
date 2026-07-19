@@ -48,17 +48,19 @@ export default function Layout({ children }) {
     <div className="flex flex-col min-h-screen bg-[#0a0a0c] text-foreground font-sans">
       {/* Top Navbar */}
       <header className="h-16 border-b border-border/50 flex items-center px-6 justify-between bg-[#0f1014] z-30 relative">
-        <div className="font-extrabold text-xl tracking-tight text-foreground flex items-center gap-2">
+        <Link href="/" className="text-3xl font-serif font-bold tracking-tight text-[#E2C391] hover:opacity-90 transition-opacity flex items-center gap-2">
             Resvo
-        </div>
+        </Link>
         <div className="flex items-center gap-6">
             <div className="flex items-center gap-4 text-muted-foreground border-r border-border/50 pr-6">
-                <button className="relative hover:text-primary transition-colors">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-500 rounded-full border-2 border-[#0f1014]"></span>
-                </button>
-                <button className="flex items-center gap-2 hover:text-primary transition-colors text-sm font-medium">
-                    <Headset className="w-5 h-5" /> Support
+                <button 
+                    onClick={async () => {
+                        await useAuthStore.getState().logout();
+                        router.push('/login');
+                    }}
+                    className="flex items-center gap-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-1.5 rounded-md transition-colors text-sm font-medium"
+                >
+                    <LogOut className="w-4 h-4" /> Logout
                 </button>
             </div>
             <div className="flex items-center gap-3">
@@ -83,16 +85,7 @@ export default function Layout({ children }) {
             <Link href="/admin/organizations" className={getLinkClass('/admin/organizations')}>
                 <Building2 className="w-5 h-5" /> Organizations
             </Link>
-            <Link href="/admin/hall-approvals" className={getLinkClass('/admin/hall-approvals')}>
-                <div className="flex justify-between items-center w-full">
-                    <div className="flex items-center gap-3">
-                        <ShieldCheck className="w-5 h-5" /> Hall Approvals
-                    </div>
-                    {stats?.pendingHalls > 0 && (
-                        <span className="bg-yellow-500/20 text-yellow-500 text-[10px] font-bold px-2 py-0.5 rounded">{stats.pendingHalls}</span>
-                    )}
-                </div>
-            </Link>
+
             <Link href="/admin/users" className={getLinkClass('/admin/users')}>
                 <Users className="w-5 h-5" /> Users
             </Link>
@@ -113,15 +106,7 @@ export default function Layout({ children }) {
                 <h4 className="text-xs font-bold text-foreground">Resvo Control Center</h4>
                 <p className="text-[10px] text-muted-foreground mt-1">Manage your platform with confidence.</p>
             </div>
-            <button 
-                onClick={async () => {
-                    await useAuthStore.getState().logout();
-                    router.push('/login');
-                }}
-                className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
-            >
-                <LogOut className="w-4 h-4" /> Logout
-            </button>
+
           </div>
         </aside>
 

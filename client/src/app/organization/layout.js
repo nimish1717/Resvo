@@ -40,9 +40,9 @@ export default function Layout({ children }) {
       {/* Sleek Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col relative z-20">
         <div className="p-6 pb-4">
-          <div className="font-extrabold text-2xl tracking-tight text-foreground">
-            Resvo<span className="text-primary">.</span>
-          </div>
+          <Link href="/" className="text-3xl font-serif font-bold tracking-tight text-[#E2C391] hover:opacity-90 transition-opacity block">
+            Resvo
+          </Link>
         </div>
 
         <div className="px-4 pb-4">
@@ -70,6 +70,19 @@ export default function Layout({ children }) {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg> Analytics
           </Link>
         </nav>
+        
+        <div className="p-4 border-t border-border">
+          <button 
+              onClick={async () => {
+                  await useAuthStore.getState().logout();
+                  router.push('/login');
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
+          >
+            <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
+            Log out
+          </button>
+        </div>
       </aside>
       
       <main className="flex-1 overflow-auto relative bg-background">

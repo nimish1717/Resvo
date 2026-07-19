@@ -47,9 +47,7 @@ export default function Navbar() {
                                     </Button>
                                     <div className="absolute right-0 mt-2 w-48 rounded-xl shadow-2xl bg-black/90 backdrop-blur-xl border border-white/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
                                         <div className="py-2">
-                                            <Link href="/dashboard" className="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors">Dashboard</Link>
-                                            <Link href="/dashboard/organizations" className="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors">Create Organization</Link>
-                                            <Link href="/list-venue" className="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors">List Venue</Link>
+
                                             <button onClick={logout} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/10 flex items-center gap-2 transition-colors">
                                                 <LogOut className="w-4 h-4" /> Log out
                                             </button>
