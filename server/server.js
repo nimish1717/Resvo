@@ -66,6 +66,7 @@ app.use('/api/halls', hallsRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/organizations", organizationsRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/admin", require('./routes/admin.routes'));
 
 
 const PORT = process.env.PORT || 4000;

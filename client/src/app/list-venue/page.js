@@ -11,6 +11,7 @@ import Link from 'next/link';
 export default function ListVenuePage() {
     const authFetch = useAuthStore((state) => state.authFetch);
     const user = useAuthStore((state) => state.user);
+    const initAuth = useAuthStore((state) => state.initAuth);
 
     const [orgName, setOrgName] = useState('');
     const [orgResult, setOrgResult] = useState(null);
@@ -41,6 +42,7 @@ export default function ListVenuePage() {
             return;
         }
         setOrgResult(data.organization);
+        await initAuth();
     }
 
     async function handleHallSubmit(e) {

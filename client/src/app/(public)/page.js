@@ -227,7 +227,7 @@ export default function HomePage() {
             <div>
               <h4 className="font-semibold mb-4 text-lg">Hosts</h4>
               <ul className="space-y-3 text-muted-foreground">
-                <li><Link href="/join-organization" className="hover:text-primary transition-colors">List Your Venue</Link></li>
+                <li><Link href="/dashboard/organizations" className="hover:text-primary transition-colors">List Your Venue</Link></li>
                 <li><Link href="/dashboard" className="hover:text-primary transition-colors">Host Dashboard</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Host Guidelines</Link></li>
               </ul>

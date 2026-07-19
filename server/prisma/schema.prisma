@@ -44,6 +44,7 @@ model halls {
   name             String
   location_area    String
   capacity         Int
+  status           String             @default("pending")
   venue_tier       String
   price_per_slot   Decimal            @db.Decimal
   photos           String[]           @default([])

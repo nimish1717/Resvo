@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuthStore } from '../../../../lib/authStore';
+import { useAuthStore } from '../../../lib/authStore';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
+import { Button } from '../../../components/ui/Button';
 import { Plus, Key, Check, X } from 'lucide-react';
 import Link from 'next/link';
 

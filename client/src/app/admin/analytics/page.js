@@ -2,36 +2,22 @@
 
 export default function AdminAnalyticsPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Platform Analytics</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">Total Users</h3>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-xs text-muted-foreground mt-2">+0 this week</p>
-        </div>
-        <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">Organizations</h3>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-xs text-muted-foreground mt-2">0 pending approval</p>
-        </div>
-        <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">Total Venues</h3>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-xs text-muted-foreground mt-2">Across 0 cities</p>
-        </div>
-        <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">Total Bookings</h3>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-xs text-muted-foreground mt-2">$0.00 GMV</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#0a0a0c] p-8 font-sans text-foreground">
+      <div className="max-w-[1600px] mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+                <h1 className="text-2xl font-bold mb-1">Analytics</h1>
+                <p className="text-sm text-muted-foreground">Detailed platform metrics and insights.</p>
+            </div>
+          </div>
 
-      <div className="bg-card border border-border rounded-xl p-8 flex flex-col items-center justify-center min-h-[400px] text-center">
-        <svg className="w-16 h-16 text-muted-foreground opacity-30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
-        <h3 className="font-semibold text-lg mb-1">Platform Growth Chart</h3>
-        <p className="text-muted-foreground text-sm max-w-sm">Detailed growth charts will populate as platform activity increases.</p>
+          <div className="bg-[#0f1014] border border-border/50 rounded-2xl overflow-hidden shadow-lg p-16 text-center">
+             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+             </div>
+             <h3 className="text-xl font-bold mb-2">Analytics Dashboard Coming Soon</h3>
+             <p className="text-muted-foreground max-w-md mx-auto">We are gathering more data to provide you with comprehensive insights. Check back later for detailed analytics.</p>
+          </div>
       </div>
     </div>
   );

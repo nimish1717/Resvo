@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8f9fa; /* Sleek light mode background */
-  --foreground: #09090b; /* Almost black */
-  --card: #ffffff;
-  --card-foreground: #09090b;
+  --background: #F9FAFB; /* Sleek light mode background */
+  --foreground: #0A0A0C; /* Almost black */
+  --card: #FFFFFF;
+  --card-foreground: #0A0A0C;
   --primary: #c29b62; /* Gold/Bronze accent from the mockup */
   --primary-foreground: #ffffff;
-  --border: #e4e4e7;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
+  --border: #E5E7EB;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
   --radius: 0.75rem;
 }
 
 .dark {
-  --background: #0f0f11; /* Sleek dark mode background */
-  --foreground: #fafafa;
-  --card: #18181b;
-  --card-foreground: #fafafa;
-  --primary: #d4af37; /* Lighter gold for dark mode */
-  --primary-foreground: #18181b;
-  --border: #27272a;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
+  --background: #0B0E14; /* Deep obsidian background */
+  --foreground: #FFFFFF;
+  --card: #131720; /* Slightly lighter dark for cards */
+  --card-foreground: #FFFFFF;
+  --primary: #D8A555; /* Signature Gold */
+  --primary-foreground: #0B0E14;
+  --border: #232836;
+  --muted: #1A1F2C;
+  --muted-foreground: #8B95A5;
 }
 
 @theme inline {

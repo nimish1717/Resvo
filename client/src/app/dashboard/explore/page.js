@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../../lib/api';
+import { Search, MapPin, Users, Star, ArrowRight, Calendar, DollarSign, Filter, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ExplorePage() {
   const [search, setSearch] = useState('');
@@ -11,7 +13,7 @@ export default function ExplorePage() {
     async function loadHalls() {
       try {
         const { response, data } = await apiFetch('/halls');
-        if (response.ok && data.halls) {
+        if (response.ok && data?.halls) {
           setHalls(data.halls);
         }
       } catch (error) {
@@ -33,64 +35,122 @@ export default function ExplorePage() {
   });
 
   return (
-    <div className="h-full bg-background text-foreground">
-      <main className="max-w-7xl mx-auto py-6 md:py-8">
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-4">Explore Venues</h1>
-          <p className="text-muted-foreground text-lg mb-8">Find the perfect space for your next event.</p>
-          
-          <div className="flex max-w-2xl gap-2">
-            <input 
-              type="text" 
-              placeholder="Search by city, name, or type..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-card border border-border rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button className="px-6 py-3 bg-primary text-primary-foreground font-medium rounded-md hover:opacity-90">
-              Search
-            </button>
+    <div className="min-h-screen bg-background text-foreground pb-12 p-8">
+      
+      {/* Top Search Bar */}
+      <div className="relative mb-8">
+        <div className="bg-card border border-border rounded-full p-2 flex items-center shadow-lg">
+          <div className="pl-4 pr-3 text-muted-foreground">
+            <Search className="w-5 h-5" />
           </div>
+          <input 
+            type="text" 
+            placeholder="Search venues, locations or collections..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm py-2"
+          />
         </div>
+      </div>
 
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
+        <div className="flex flex-wrap items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full text-sm hover:border-primary transition-colors">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+            <span>Location</span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full text-sm hover:border-primary transition-colors">
+            <Star className="w-4 h-4 text-muted-foreground" />
+            <span>Event Type</span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full text-sm hover:border-primary transition-colors">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span>Date</span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full text-sm hover:border-primary transition-colors">
+            <Users className="w-4 h-4 text-muted-foreground" />
+            <span>Guests</span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full text-sm hover:border-primary transition-colors">
+            <DollarSign className="w-4 h-4 text-muted-foreground" />
+            <span>Budget</span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+        <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full text-sm hover:border-primary transition-colors">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span>Filters</span>
+        </button>
+      </div>
+
+      <div className="flex justify-between items-end mb-6">
+        <h2 className="text-xl font-bold">Popular Venues</h2>
+        <span className="text-sm text-muted-foreground">Sort by: <span className="text-primary cursor-pointer">Recommended &gt;</span></span>
+      </div>
+
+      <main>
         {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <p className="text-muted-foreground">Loading venues...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+                <div key={i} className="animate-pulse bg-card border border-border rounded-2xl h-[300px]"></div>
+            ))}
           </div>
         ) : filteredHalls.length === 0 ? (
-          <div className="bg-card border border-border rounded-xl p-12 flex flex-col items-center justify-center text-center">
-            <svg className="w-12 h-12 text-muted-foreground opacity-50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <h3 className="text-xl font-semibold mb-2">No venues there</h3>
-            <p className="text-muted-foreground max-w-sm">We couldn't find any venues matching your search. Try adjusting your filters.</p>
+          <div className="bg-card border border-border rounded-2xl p-16 flex flex-col items-center justify-center text-center">
+            <Search className="w-12 h-12 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-bold mb-2">No venues found</h3>
+            <p className="text-muted-foreground">We couldn't find any venues matching "{search}". Try adjusting your search criteria.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {filteredHalls.map((hall) => (
-              <div key={hall.id} className="bg-card border border-border rounded-xl overflow-hidden group hover:border-primary transition-colors cursor-pointer">
-                <div className="h-48 bg-muted flex items-center justify-center overflow-hidden">
+              <Link href={`/halls/${hall.id}`} key={hall.id} className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-primary transition-all duration-300 flex flex-col cursor-pointer">
+                <div className="relative h-48 bg-muted overflow-hidden">
                   {hall.photos && hall.photos.length > 0 ? (
-                    <img src={hall.photos[0]} alt={hall.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src={hall.photos[0]} alt={hall.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out" />
                   ) : (
-                    <svg className="w-12 h-12 text-muted-foreground opacity-20 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
+                        <MapPin className="w-10 h-10 opacity-50" />
+                    </div>
                   )}
                 </div>
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg">{hall.name}</h3>
-                    {hall.venue_tier && (
-                      <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded font-medium capitalize">{hall.venue_tier}</span>
-                    )}
+                <div className="p-5 flex flex-col flex-1">
+                  <h3 className="font-semibold text-lg line-clamp-1 mb-1">{hall.name}</h3>
+                  
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-xs text-muted-foreground line-clamp-1 flex-1">{hall.location_area || 'Location unavailable'}</p>
+                    <span className="text-xs text-primary flex items-center gap-1"><Star className="w-3 h-3 fill-primary" /> 4.8</span>
                   </div>
-                  <p className="text-muted-foreground text-sm mb-4">{hall.location_area} • up to {hall.capacity} guests</p>
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold">${hall.price_per_slot}<span className="text-muted-foreground text-sm font-normal"> / hour</span></span>
-                    <button className="text-sm font-medium text-primary hover:underline">View Details</button>
+                  
+                  <div className="mt-auto">
+                    <p className="text-xs font-medium">
+                      {hall.capacity ? `${hall.capacity} Pax` : 'Variable Pax'} - <span className="text-muted-foreground">${hall.price_per_slot || 0}</span>
+                    </p>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
+
+        {/* Banner */}
+        <div className="bg-card border border-border rounded-2xl p-8 flex flex-col md:flex-row justify-between items-center relative overflow-hidden mt-8">
+            <div className="relative z-10 text-center md:text-left mb-6 md:mb-0">
+                <h3 className="text-2xl font-bold mb-2">Planning something special?</h3>
+                <p className="text-muted-foreground">Our concierge team will help you find the perfect venue.</p>
+            </div>
+            <button className="relative z-10 bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors">
+                Get Expert Help
+            </button>
+            {/* Optional decorative background elements could go here */}
+            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none"></div>
+        </div>
+
       </main>
     </div>
   );

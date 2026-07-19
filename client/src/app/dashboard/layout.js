@@ -1,13 +1,14 @@
-
 'use client';
 import { useAuthStore } from '../lib/authStore';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { LayoutDashboard, Compass, CalendarDays, User, PlusCircle, LogOut } from 'lucide-react';
 
 export default function Layout({ children }) {
   const user = useAuthStore(state => state.user);
   const loading = useAuthStore(state => state.loading);
+  const logout = useAuthStore(state => state.logout);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -15,41 +16,75 @@ export default function Layout({ children }) {
     if (!loading) {
       if (!user) {
         router.push('/login');
-      } else if ('USER' !== 'ANY' && user.role !== 'USER') {
-        router.push('/');
       }
     }
   }, [user, loading, router]);
 
-  if (loading || !user) return <div className="flex justify-center p-20">Loading...</div>;
-  if ('USER' !== 'ANY' && user.role !== 'USER') return null;
+  if (loading || !user) return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+  );
 
   const getLinkClass = (path) => {
-    const isActive = pathname === path;
-    return `p-2 rounded-md text-sm transition-colors ${isActive ? 'bg-muted border border-border' : 'hover:bg-muted'}`;
+    const isActive = pathname === path || (path !== '/dashboard' && pathname.startsWith(path));
+    return `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-300 relative ${
+      isActive 
+      ? 'text-primary bg-primary/5 before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-primary' 
+      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+    }`;
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-
-      <div className="flex flex-1">
-        <aside className="w-64 border-r bg-card p-4 flex flex-col gap-2">
-          <div className="font-bold text-2xl mb-6 px-2">Resvo</div>
-          <Link href="/dashboard/explore" className="p-2 mb-4 bg-primary text-primary-foreground text-center rounded-md text-sm font-semibold hover:opacity-90 transition-opacity">
-            Explore Venues
-          </Link>
-          <Link href="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
-          <Link href="/dashboard/bookings" className={getLinkClass('/dashboard/bookings')}>My Bookings</Link>
-          <Link href="/dashboard/saved" className={getLinkClass('/dashboard/saved')}>Saved Venues</Link>
-          <Link href="/dashboard/profile" className={getLinkClass('/dashboard/profile')}>Profile</Link>
-          <div className="mt-4 pt-4 border-t border-border">
-            <Link href="/join-organization" className={getLinkClass('/join-organization')}>Join / Create Org</Link>
+    <div className="flex h-screen bg-background overflow-hidden">
+      
+      {/* Sleek Sidebar */}
+      <aside className="w-64 bg-card border-r border-border flex flex-col relative z-20">
+        <div className="p-6 pb-4">
+          <div className="font-extrabold text-2xl tracking-tight text-foreground">
+            Resvo<span className="text-primary">.</span>
           </div>
-        </aside>
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
-        </main>
-      </div>
+        </div>
+
+        <div className="px-4 pb-4">
+            <div className="bg-muted/30 p-1 rounded-lg flex border border-border/50">
+               <Link href="/dashboard" className="flex-1 text-center text-xs font-bold py-2 rounded-md bg-primary text-primary-foreground shadow-sm">
+                  User Dashboard
+               </Link>
+               <Link href="/organization/dashboard" className="flex-1 text-center text-xs font-bold py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors">
+                  Org Dashboard
+               </Link>
+            </div>
+        </div>
+        
+        <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-hide py-2">
+          <Link href="/dashboard" className={getLinkClass('/dashboard')}>
+            <LayoutDashboard className="w-5 h-5" /> Dashboard
+          </Link>
+          <Link href="/dashboard/explore" className={getLinkClass('/dashboard/explore')}>
+            <Compass className="w-5 h-5" /> Explore Venues
+          </Link>
+          <Link href="/dashboard/bookings" className={getLinkClass('/dashboard/bookings')}>
+            <CalendarDays className="w-5 h-5" /> My Bookings
+          </Link>
+          <Link href="/dashboard/saved" className={getLinkClass('/dashboard/saved')}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg> Saved Venues
+          </Link>
+          <Link href="/dashboard/profile" className={getLinkClass('/dashboard/profile')}>
+            <User className="w-5 h-5" /> Profile
+          </Link>
+        </nav>
+        
+        <div className="p-4 border-t border-border">
+          <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all rounded-md">
+            <LogOut className="w-5 h-5" /> Log out
+          </button>
+        </div>
+      </aside>
+      
+      <main className="flex-1 overflow-auto relative bg-background">
+        {children}
+      </main>
     </div>
   );
 }

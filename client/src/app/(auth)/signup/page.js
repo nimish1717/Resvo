@@ -2,17 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '../../../lib/authStore';
-import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../../components/ui/Card';
+import { useAuthStore } from '../../lib/authStore';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../components/ui/Card';
 import Link from 'next/link';
-import { LogIn } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 
-export default function LoginPage() {
+export default function SignupPage() {
     const router = useRouter();
-    const login = useAuthStore((state) => state.login);
+    const signup = useAuthStore((state) => state.signup);
 
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -23,7 +24,7 @@ export default function LoginPage() {
         setError('');
         setSubmitting(true);
 
-        const { response, data } = await login(email, password);
+        const { response, data } = await signup(name, email, password);
 
         setSubmitting(false);
 
@@ -45,17 +46,30 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-muted/30">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30 relative">
+            <Link href="/" className="absolute top-8 left-8 sm:left-12 text-3xl font-serif font-bold tracking-tight text-[#E2C391] z-50">
+                Resvo
+            </Link>
             <Card className="w-full max-w-md shadow-xl border-border/50">
                 <CardHeader className="text-center space-y-2">
                     <div className="mx-auto bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-2">
-                        <LogIn className="w-6 h-6 text-primary" />
+                        <UserPlus className="w-6 h-6 text-primary" />
                     </div>
-                    <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
-                    <CardDescription>Enter your credentials to access your account</CardDescription>
+                    <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
+                    <CardDescription>Join Resvo to discover extraordinary venues</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-foreground">Name</label>
+                            <Input
+                                type="text"
+                                placeholder="John Doe"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
+                        </div>
                         <div className="space-y-1">
                             <label className="text-sm font-medium text-foreground">Email</label>
                             <Input
@@ -67,15 +81,14 @@ export default function LoginPage() {
                             />
                         </div>
                         <div className="space-y-1">
-                            <div className="flex justify-between items-center">
-                                <label className="text-sm font-medium text-foreground">Password</label>
-                            </div>
+                            <label className="text-sm font-medium text-foreground">Password</label>
                             <Input
                                 type="password"
-                                placeholder="••••••••"
+                                placeholder="Min 8 characters"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
+                                minLength={8}
                             />
                         </div>
 
@@ -86,15 +99,15 @@ export default function LoginPage() {
                             disabled={submitting}
                             className="w-full mt-2"
                         >
-                            {submitting ? 'Signing in...' : 'Sign in'}
+                            {submitting ? 'Creating account...' : 'Sign up'}
                         </Button>
                     </form>
                 </CardContent>
                 <CardFooter className="justify-center border-t border-border/50 pt-6">
                     <p className="text-sm text-muted-foreground">
-                        Don't have an account?{' '}
-                        <Link href="/signup" className="font-semibold text-primary hover:underline">
-                            Sign up
+                        Already have an account?{' '}
+                        <Link href="/login" className="font-semibold text-primary hover:underline">
+                            Log in
                         </Link>
                     </p>
                 </CardFooter>

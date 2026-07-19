@@ -1,22 +1,171 @@
 'use client';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../lib/authStore';
+import Link from 'next/link';
+import { CalendarDays, Heart, PlusCircle, ArrowRight, ShieldCheck, Clock, BookOpen, Search, Mail, ReceiptText } from 'lucide-react';
 
 export default function Page() {
-  const user = useAuthStore(state => state.user);
+    const user = useAuthStore(state => state.user);
+    const authFetch = useAuthStore(state => state.authFetch);
+    const [organizations, setOrganizations] = useState([]);
+    const [bookings, setBookings] = useState([]);
+    const [savedVenues, setSavedVenues] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Welcome back, {user?.name || 'User'}!</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 bg-card border rounded-lg shadow-sm">
-          <h2 className="font-semibold mb-2">My Bookings</h2>
-          <p className="text-muted-foreground text-sm">You have no upcoming bookings.</p>
+    useEffect(() => {
+        async function fetchDashboardData() {
+            if (!user) return;
+            try {
+                // Fetch Organizations
+                const orgRes = await authFetch('/organizations/mine');
+                if (orgRes.response.ok) {
+                    setOrganizations(orgRes.data.organizations || []);
+                }
+
+                // Fetch Bookings (gracefully falls back if endpoint missing)
+                const bookRes = await authFetch('/bookings');
+                if (bookRes.response?.ok && bookRes.data?.bookings) {
+                    setBookings(bookRes.data.bookings);
+                }
+
+                // Fetch Saved Venues
+                const savedRes = await authFetch('/saved-halls');
+                if (savedRes.response?.ok && savedRes.data?.halls) {
+                    setSavedVenues(savedRes.data.halls);
+                }
+            } catch (error) {
+                console.error("Failed to fetch dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchDashboardData();
+    }, [authFetch, user]);
+
+    const firstName = user?.name?.split(' ')[0] || 'User';
+
+    // Calculate Dynamic Stats
+    const upcomingBookingsCount = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length || 0;
+    const savedVenuesCount = savedVenues.length || 0;
+    const totalSpent = bookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+    return (
+        <div className="min-h-screen bg-background text-foreground pb-12 p-8">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
+                <div>
+                    <h1 className="text-3xl md:text-4xl font-semibold mb-2 flex items-center gap-2">
+                        Good evening, {firstName} <span className="text-2xl">👋</span>
+                    </h1>
+                    <p className="text-muted-foreground">
+                        Here's what's happening with your events.
+                    </p>
+                </div>
+                <Link href="/dashboard/explore" className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-6 py-2.5 rounded-lg font-medium text-sm">
+                    Explore Venues
+                </Link>
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                <div className="bg-card border border-border p-6 rounded-xl flex flex-col justify-between">
+                    <h2 className="text-4xl font-medium mb-4">{upcomingBookingsCount}</h2>
+                    <p className="text-sm text-muted-foreground">Upcoming Bookings</p>
+                </div>
+                <div className="bg-card border border-border p-6 rounded-xl flex flex-col justify-between">
+                    <h2 className="text-4xl font-medium mb-4">{savedVenuesCount}</h2>
+                    <p className="text-sm text-muted-foreground">Saved Venues</p>
+                </div>
+                <div className="bg-card border border-border p-6 rounded-xl flex flex-col justify-between">
+                    <h2 className="text-4xl font-medium mb-4">{organizations.length}</h2>
+                    <p className="text-sm text-muted-foreground">My Organizations</p>
+                </div>
+                <div className="bg-card border border-border p-6 rounded-xl flex flex-col justify-between">
+                    <h2 className="text-4xl font-medium mb-4">₹{totalSpent.toLocaleString()}</h2>
+                    <p className="text-sm text-muted-foreground">Total Spent</p>
+                </div>
+            </div>
+
+            {/* Split Row: Upcoming Bookings & Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+                {/* Upcoming Bookings */}
+                <div className="lg:col-span-2">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Upcoming Bookings</h3>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div className="bg-card border border-border rounded-xl p-8 flex flex-col items-center justify-center text-center">
+                            <CalendarDays className="w-8 h-8 text-muted-foreground mb-2" />
+                            <h4 className="font-medium">No upcoming bookings</h4>
+                            <p className="text-sm text-muted-foreground mt-1 mb-4">You have no upcoming events.</p>
+                            <Link href="/dashboard/explore" className="text-sm text-primary hover:underline font-medium">
+                                Book a venue
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Quick Actions & My Organizations */}
+                <div className="flex flex-col gap-8">
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Link href="/dashboard/explore" className="bg-card border border-border rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:border-primary transition-colors group">
+                                <Search className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                                <span className="text-xs text-muted-foreground group-hover:text-foreground">Book Venue</span>
+                            </Link>
+                            <Link href="/dashboard/saved" className="bg-card border border-border rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:border-primary transition-colors group">
+                                <Heart className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                                <span className="text-xs text-muted-foreground group-hover:text-foreground">Saved Venues</span>
+                            </Link>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold">My Organizations</h3>
+                            <Link href="/dashboard/organizations" className="text-xs text-primary hover:underline flex items-center gap-1">
+                                Join/Create <PlusCircle className="w-3 h-3" />
+                            </Link>
+                        </div>
+                        {loading ? (
+                            <div className="h-20 bg-muted animate-pulse rounded-xl"></div>
+                        ) : organizations.length > 0 ? (
+                            <div className="space-y-3">
+                                {organizations.map(org => (
+                                    <div key={org.id} className="bg-card border border-border rounded-xl p-4 flex justify-between items-center hover:border-primary transition-colors group">
+                                        <div>
+                                            <h4 className="font-medium text-sm line-clamp-1">{org.name}</h4>
+                                            <span className="text-xs text-muted-foreground capitalize">{org.myRole.replace('_', ' ')}</span>
+                                        </div>
+                                        <Link href="/organization/dashboard" className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                                            Manage <ArrowRight className="inline w-3 h-3" />
+                                        </Link>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-card border border-border rounded-xl p-4 text-center text-sm text-muted-foreground">
+                                No organizations yet.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Recommended for You */}
+            <div>
+                <h3 className="text-lg font-semibold mb-4">Recommended for You</h3>
+                <div className="bg-card border border-border rounded-xl p-8 flex flex-col items-center justify-center text-center">
+                    <Search className="w-8 h-8 text-muted-foreground mb-2" />
+                    <h4 className="font-medium">No recommendations right now</h4>
+                    <p className="text-sm text-muted-foreground mt-1 mb-4">Check out our explore page to find venues.</p>
+                    <Link href="/dashboard/explore" className="text-sm text-primary hover:underline font-medium">
+                        Explore all venues
+                    </Link>
+                </div>
+            </div>
         </div>
-        <div className="p-6 bg-card border rounded-lg shadow-sm">
-          <h2 className="font-semibold mb-2">Saved Venues</h2>
-          <p className="text-muted-foreground text-sm">0 venues saved.</p>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
