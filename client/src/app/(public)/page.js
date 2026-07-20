@@ -23,7 +23,7 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground overflow-hidden">
-      
+
       {/* Decorative ambient background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-primary/5 blur-[120px] animate-pulse" />
@@ -33,7 +33,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative w-full h-screen min-h-[700px] flex flex-col items-center justify-center z-10 overflow-hidden">
         {/* Background Image & Overlay */}
-        <div 
+        <div
           className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/bg.png')" }}
         />
@@ -42,23 +42,23 @@ export default function HomePage() {
         <div className="absolute bottom-[-1px] left-0 right-0 h-64 bg-gradient-to-t from-background via-background/80 to-transparent z-0" />
 
         <div className="container relative z-10 px-4 flex flex-col items-center text-center mt-16">
-          
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-md text-sm text-white/80 mb-8">
+
+          {/* <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-md text-sm text-white/80 mb-8">
             <Sparkles className="w-4 h-4 text-[#E2C391]" />
             <span>The new standard for venue booking</span>
-          </div>
-          
+          </div> */}
+
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-bold tracking-tight mb-6 max-w-4xl leading-[1.1] text-white">
             Extraordinary spaces <br className="hidden md:block" />
             for <br className="hidden md:block" />
             <span className="font-sans italic text-transparent bg-clip-text bg-gradient-to-r from-[#A7C8E7] via-[#85B0D6] to-[#5C8DB8] px-2 font-medium tracking-normal text-[1.1em]">unforgettable</span> <br className="hidden md:block" />
             moments
           </h1>
-          
+
           <p className="text-lg md:text-xl text-white/70 max-w-2xl mb-12 font-light leading-relaxed">
             Discover and book the world's most exceptional venues for weddings, celebrations, and corporate events.
           </p>
-          
+
           <Link href="/dashboard/explore">
             <Button size="lg" className="rounded-full px-12 py-6 text-lg font-medium bg-[#E2C391] hover:bg-[#d4b37f] text-black shadow-[0_0_40px_rgba(226,195,145,0.3)] hover:shadow-[0_0_60px_rgba(226,195,145,0.5)] transition-all">
               Explore Venues
@@ -99,7 +99,7 @@ export default function HomePage() {
               <p className="text-xl text-muted-foreground leading-relaxed">
                 We've curated a highly exclusive list of properties that redefine luxury and aesthetics. From modern minimalist lofts to sweeping historical estates.
               </p>
-              
+
               <div className="space-y-6 pt-4">
                 {[
                   { title: 'Verified Properties', desc: 'Every venue is physically inspected for quality.' },
@@ -118,13 +118,13 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            
+
             <div className="order-1 lg:order-2 relative">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-blue-500/20 rounded-3xl blur-3xl transform rotate-3" />
               <div className="relative aspect-[4/5] rounded-3xl overflow-hidden border border-border/50 shadow-2xl">
-                <img 
-                  src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200" 
-                  alt="Premium Event Space" 
+                <img
+                  src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200"
+                  alt="Premium Event Space"
                   className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-1000"
                 />
                 <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
@@ -146,7 +146,7 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Loved by our hosts and guests</h2>
             <p className="text-xl text-muted-foreground">Hear what the community has to say about Resvo.</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { name: 'Sarah Jenkins', role: 'Event Planner', quote: 'Resvo transformed how I source venues. The properties are stunning and the platform is incredibly intuitive.' },
@@ -155,7 +155,7 @@ export default function HomePage() {
             ].map((review, i) => (
               <div key={i} className="bg-card/40 backdrop-blur-md border border-border/50 p-8 rounded-3xl hover:border-primary/50 transition-colors">
                 <div className="flex gap-1 mb-6">
-                  {[1,2,3,4,5].map(star => <Star key={star} className="w-5 h-5 text-primary fill-primary" />)}
+                  {[1, 2, 3, 4, 5].map(star => <Star key={star} className="w-5 h-5 text-primary fill-primary" />)}
                 </div>
                 <p className="text-lg mb-8 italic text-muted-foreground">"{review.quote}"</p>
                 <div className="flex items-center gap-4">
@@ -178,10 +178,10 @@ export default function HomePage() {
             About Us
           </div>
           <h2 className="text-4xl md:text-6xl font-bold mb-8">Bridging the gap between extraordinary spaces and visionaries.</h2>
-          
+
           <div className="space-y-6 text-xl text-muted-foreground font-light leading-relaxed mb-16 text-left md:text-center">
             <p>
-              Founded in 2024, Resvo was built on a simple premise: the perfect space shouldn't be hidden behind endless phone calls, opaque pricing, and outdated booking systems. 
+              Founded in 2024, Resvo was built on a simple premise: the perfect space shouldn't be hidden behind endless phone calls, opaque pricing, and outdated booking systems.
             </p>
             <p>
               We empower organizations to monetize their stunning properties, while providing event planners, corporate teams, and individuals with a seamless, intuitive booking experience. Whether you're hosting an intimate workshop or a gala for 500, we ensure every detail of your reservation is flawless.
@@ -192,7 +192,7 @@ export default function HomePage() {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-blue-500 to-primary" />
             <h3 className="text-3xl font-bold mb-4">Start discovering amazing venues today.</h3>
             <p className="text-muted-foreground mb-8 text-lg">Browse our curated selection and find the perfect match.</p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
               <Link href="/dashboard/explore" className="w-full sm:w-auto">
                 <Button size="lg" className="rounded-full px-8 py-6 text-lg w-full shadow-lg shadow-primary/20">
