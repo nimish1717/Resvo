@@ -11,19 +11,8 @@ export default function SavedPage() {
 
   useEffect(() => {
     async function fetchSavedVenues() {
-      try {
-        setLoading(true);
-        // Note: Assuming a GET endpoint for saved venues.
-        // If it doesn't exist, this will gracefully fall back to the empty state.
-        const { response, data } = await authFetch('/saved-halls');
-        if (response.ok && data?.halls) {
-          setSavedVenues(data.halls);
-        }
-      } catch (err) {
-        console.error('Failed to fetch saved venues', err);
-      } finally {
-        setLoading(false);
-      }
+      setLoading(false);
+      setSavedVenues([]);
     }
     fetchSavedVenues();
   }, [authFetch]);

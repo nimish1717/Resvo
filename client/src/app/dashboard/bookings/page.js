@@ -10,6 +10,19 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const authFetch = useAuthStore(state => state.authFetch);
 
+  const formatTimeRange = (rangeStr) => {
+      if (!rangeStr) return '';
+      const clean = rangeStr.replace(/[\[\]\(\)]/g, '');
+      const [start, end] = clean.split(',').map(s => s.trim().replace(/"/g, ''));
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      return {
+          date: startDate.getDate(),
+          month: startDate.toLocaleString('default', { month: 'short' }),
+          timeStr: `${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+      };
+  };
+
   useEffect(() => {
     async function fetchBookings() {
       try {
@@ -74,18 +87,19 @@ export default function BookingsPage() {
                 {bookings.map((booking) => (
                     <div key={booking.id} className="bg-card border border-border rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between group hover:border-primary transition-colors">
                         <div className="flex items-center gap-6 w-full md:w-auto mb-4 md:mb-0">
-                            <div className="text-center w-12 flex-shrink-0">
-                                <p className="text-2xl font-light">{new Date(booking.time_range).getDate()}</p>
+                            <div className="text-center w-12 flex-shrink-0 flex flex-col items-center justify-center">
+                                <p className="text-2xl font-light text-primary">{formatTimeRange(booking.time_range).date}</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{formatTimeRange(booking.time_range).month}</p>
                             </div>
                             
-                            <div className="w-24 h-16 rounded-md bg-muted overflow-hidden flex-shrink-0">
-                                <div className="w-full h-full bg-slate-800"></div>
+                            <div className="w-24 h-16 rounded-md bg-muted overflow-hidden flex-shrink-0 border border-border flex items-center justify-center">
+                                <CalendarDays className="w-6 h-6 text-muted-foreground/50" />
                             </div>
                             
                             <div>
-                                <h4 className="font-semibold text-foreground mb-1">{booking.hall_id}</h4>
+                                <h4 className="font-semibold text-foreground mb-1">{booking.hall_name || 'Venue'}</h4>
                                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                    <span>{booking.time_range}</span>
+                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatTimeRange(booking.time_range).timeStr}</span>
                                 </div>
                             </div>
                         </div>
