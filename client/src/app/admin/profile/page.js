@@ -23,10 +23,6 @@ export default function ProfilePage() {
             }
             setStats({ bookings: totalBookings, spent: totalSpent });
 
-            const savedRes = await authFetch('/saved-halls');
-            if (savedRes.response?.ok && savedRes.data?.halls) {
-                setFavorites(savedRes.data.halls.slice(0, 3));
-            }
         } catch (error) {
             console.error("Failed to fetch profile data:", error);
         }

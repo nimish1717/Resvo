@@ -70,10 +70,11 @@ const signup = async (req, res) => {
         const isSuperAdmin = user.email === process.env.SUPER_ADMIN_EMAIL;
         const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin);
 
+        const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, { 
             httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', 
-            sameSite: 'lax', 
+            secure: isProd, 
+            sameSite: isProd ? 'none' : 'lax', 
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
@@ -134,10 +135,11 @@ const login = async (req, res) => {
         const isSuperAdmin = user.email === process.env.SUPER_ADMIN_EMAIL;
         const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin);
 
+        const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, { 
             httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', 
-            sameSite: 'lax', 
+            secure: isProd, 
+            sameSite: isProd ? 'none' : 'lax', 
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
@@ -207,10 +209,11 @@ const refresh = async (req, res) => {
         // Generate new pair
         const newTokens = await generateTokens(user.id, user.email, isSuperAdmin);
 
+        const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', newTokens.refreshToken, { 
             httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', 
-            sameSite: 'lax', 
+            secure: isProd, 
+            sameSite: isProd ? 'none' : 'lax', 
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
@@ -242,7 +245,12 @@ const logout = async (req, res) => {
             WHERE token_hash = ${tokenHash}
         `;
 
-        res.clearCookie('refreshToken');
+        const isProd = process.env.NODE_ENV === 'production';
+        res.clearCookie('refreshToken', { 
+            httpOnly: true, 
+            secure: isProd, 
+            sameSite: isProd ? 'none' : 'lax'
+        });
         return res.status(200).json({ status: true, message: 'Logged out successfully' });
     } catch (error) {
         return res.status(500).json({ status: false, message: 'Error logging out', error: error.message });
