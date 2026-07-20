@@ -165,7 +165,7 @@ const refresh = async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
         if (!refreshToken) {
-            return res.status(401).json({ status: false, message: 'refreshToken cookie is required' });
+            return res.status(200).json({ status: false, message: 'refreshToken cookie is required' });
         }
 
         const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -176,22 +176,22 @@ const refresh = async (req, res) => {
         `;
 
         if (tokens.length === 0) {
-            return res.status(401).json({ status: false, message: 'Invalid refresh token' });
+            return res.status(200).json({ status: false, message: 'Invalid refresh token' });
         }
 
         const dbToken = tokens[0];
 
         // Check expiration
         if (new Date(dbToken.expires_at) < new Date()) {
-            return res.status(401).json({ status: false, message: 'Refresh token expired' });
+            return res.status(200).json({ status: false, message: 'Refresh token expired' });
         }
 
         // Theft Detection: only if it was revoked due to rotation
         if (dbToken.revoked && dbToken.revoked_reason === 'rotated') {
             await prisma.$queryRaw`UPDATE refresh_tokens SET revoked = true WHERE user_id = ${dbToken.user_id}::uuid`;
-            return res.status(401).json({ status: false, message: 'Token theft detected. All sessions revoked.' });
+            return res.status(200).json({ status: false, message: 'Token theft detected. All sessions revoked.' });
         } else if (dbToken.revoked) {
-            return res.status(401).json({ status: false, message: 'Invalid or expired refresh token' });
+            return res.status(200).json({ status: false, message: 'Invalid or expired refresh token' });
         }
 
         // Token is valid: Revoke it for rotation

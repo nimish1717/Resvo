@@ -111,6 +111,29 @@ const getBookingsByHall = async (req, res) => {
     }
 }
 
+const getMyBookings = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const result = await prisma.$queryRaw`
+            SELECT b.id, b.status, b.time_range::text, b.created_at, h.name as hall_name, h.id as hall_id
+            FROM bookings b
+            JOIN halls h ON b.hall_id = h.id
+            WHERE b.requested_by = ${userId}::uuid
+            ORDER BY b.created_at DESC;
+        `;
+        return res.status(200).json({
+            status: true,
+            bookings: result
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}
+
 const approveBooking = async (req, res) => {
     try {
         const { id } = req.params;
@@ -540,5 +563,6 @@ module.exports = {
     checkInBooking,
     noShowBooking,
     completeBooking,
-    cancelBooking
+    cancelBooking,
+    getMyBookings
 }

@@ -15,7 +15,8 @@ const {
     checkInBooking,
     noShowBooking,
     completeBooking,
-    cancelBooking
+    cancelBooking,
+    getMyBookings
 } = require('../controllers/bookings.controller');
 
 const resolveOrgFromBookingId = async (req) => {
@@ -27,6 +28,8 @@ const resolveOrgFromBookingId = async (req) => {
     `;
     return result[0]?.organization_id;
 };
+
+router.get('/', requireAuth, getMyBookings);
 
 router.post('/', requireAuth, createBooking);
 
