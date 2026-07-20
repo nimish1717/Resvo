@@ -23,7 +23,11 @@ startTokenCleanupWorker();
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: [
+        'http://localhost:3000',
+        'https://resvo-wine.vercel.app',
+        process.env.CLIENT_URL
+    ].filter(Boolean),
     credentials: true
 }));
 app.use(express.json());
