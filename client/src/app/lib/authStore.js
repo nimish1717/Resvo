@@ -8,8 +8,10 @@ export const useAuthStore = create((set, get) => ({
 
     initAuth: async () => {
         const { response, data } = await apiFetch('/auth/refresh', { method: 'POST' });
-        if (response.ok) {
+        if (response.ok && data?.status) {
             set({ accessToken: data.token, user: data.user });
+        } else {
+            set({ accessToken: null, user: null });
         }
         set({ loading: false });
     },
@@ -56,7 +58,7 @@ export const useAuthStore = create((set, get) => ({
         if (response.status === 401) {
             const refreshResult = await apiFetch('/auth/refresh', { method: 'POST' });
 
-            if (refreshResult.response.ok) {
+            if (refreshResult.response.ok && refreshResult.data?.status) {
                 set({ accessToken: refreshResult.data.token, user: refreshResult.data.user });
                 ({ response, data } = await doRequest(refreshResult.data.token));
             } else {

@@ -110,14 +110,14 @@ const login = async (req, res) => {
         const user = await prisma.users.findUnique({ where: { email } });
 
         if (!user) {
-            return res.status(401).json({
+            return res.status(200).json({
                 status: false,
                 message: 'Invalid email or password'
             });
         }
 
         if (!user.password_hash) {
-            return res.status(401).json({
+            return res.status(200).json({
                 status: false,
                 message: 'Invalid email or password'
             });
@@ -125,7 +125,7 @@ const login = async (req, res) => {
 
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
         if (!isPasswordValid) {
-            return res.status(401).json({
+            return res.status(200).json({
                 status: false,
                 message: 'Invalid email or password'
             });
@@ -232,7 +232,7 @@ const logout = async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
         if (!refreshToken) {
-            return res.status(400).json({ status: false, message: 'refreshToken cookie is required' });
+            return res.status(200).json({ status: true, message: 'Already logged out' });
         }
 
         const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
