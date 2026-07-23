@@ -57,7 +57,7 @@ const getBookingById = async (req, res) => {
     try {
         const { id } = req.params;
         const result = await prisma.$queryRaw`
-            SELECT id, hall_id, requested_by, status, time_range::text, response_deadline, created_at, superseded_by, reason, suggestion_round
+            SELECT id, hall_id, requested_by, status, time_range::text, response_deadline, created_at, superseded_by, reason, suggestion_round, payment_status, total_amount
             FROM bookings
             WHERE id = ${id}::uuid;
         `;
@@ -69,10 +69,21 @@ const getBookingById = async (req, res) => {
             });
         }
 
+        const actions = await prisma.$queryRaw`
+            SELECT ba.id, ba.action, ba.created_at, u.name as acting_user_name
+            FROM booking_actions ba
+            LEFT JOIN users u ON ba.acting_user_id = u.id
+            WHERE ba.booking_id = ${id}::uuid
+            ORDER BY ba.created_at ASC;
+        `;
+
+        const booking = result[0];
+        booking.actions = actions;
+
         return res.status(200).json({
             status: true,
             message: 'Booking fetched successfully',
-            booking: result[0]
+            booking: booking
         });
 
     } catch (error) {
@@ -89,7 +100,7 @@ const getBookingsByHall = async (req, res) => {
     try {
         const { hallId } = req.params;
         const result = await prisma.$queryRaw`
-            SELECT id, hall_id, requested_by, status, time_range::text, created_at
+            SELECT id, hall_id, requested_by, status, time_range::text, created_at, payment_status, total_amount
             FROM bookings
             WHERE hall_id = ${hallId}::uuid
             ORDER BY created_at DESC;
@@ -115,7 +126,7 @@ const getMyBookings = async (req, res) => {
     try {
         const userId = req.user.userId;
         const result = await prisma.$queryRaw`
-            SELECT b.id, b.status, b.time_range::text, b.created_at, h.name as hall_name, h.id as hall_id
+            SELECT b.id, b.status, b.time_range::text, b.created_at, b.payment_status, b.total_amount, h.name as hall_name, h.id as hall_id
             FROM bookings b
             JOIN halls h ON b.hall_id = h.id
             WHERE b.requested_by = ${userId}::uuid
@@ -142,7 +153,7 @@ const approveBooking = async (req, res) => {
         const booking = await prisma.$transaction(async (tx) => {
             const updated = await tx.$queryRaw`
                 UPDATE bookings
-                SET status = 'approved'
+                SET status = 'approved', payment_status = 'pending'
                 WHERE id = ${id}::uuid AND status = 'requested'
                 RETURNING id, hall_id, requested_by, status, time_range::text;
             `;
@@ -551,6 +562,47 @@ const cancelBooking = async (req, res) => {
     }
 }
 
+const simulatePayment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const actingUserId = req.user.userId;
+
+        const booking = await prisma.$transaction(async (tx) => {
+            const updated = await tx.$queryRaw`
+                UPDATE bookings
+                SET payment_status = 'paid'
+                WHERE id = ${id}::uuid AND status = 'approved' AND payment_status = 'pending'
+                RETURNING id, hall_id, requested_by, status, payment_status, time_range::text;
+            `;
+
+            if (updated.length === 0) {
+                throw new Error('BOOKING_NOT_FOUND_OR_NOT_PAYABLE');
+            }
+
+            await tx.$executeRaw`
+                INSERT INTO booking_actions (booking_id, acting_user_id, action)
+                VALUES (${id}::uuid, ${actingUserId}::uuid, 'paid');
+            `;
+
+            return updated[0];
+        });
+
+        res.status(200).json({ status: true, message: 'Payment successful', booking });
+    } catch (error) {
+        if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_PAYABLE') {
+            return res.status(404).json({
+                status: false,
+                message: 'Booking not found, or it is not pending payment',
+            });
+        }
+        return res.status(500).json({
+            status: false,
+            message: 'Something went wrong while processing payment',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     createBooking,
     getBookingById,
@@ -564,5 +616,6 @@ module.exports = {
     noShowBooking,
     completeBooking,
     cancelBooking,
-    getMyBookings
+    getMyBookings,
+    simulatePayment
 }

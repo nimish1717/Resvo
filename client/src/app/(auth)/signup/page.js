@@ -29,7 +29,7 @@ export default function SignupPage() {
 
         setSubmitting(false);
 
-        if (!response.ok) {
+        if (!response.ok || data?.status === false) {
             setError(data?.message || data?.error || 'Something went wrong');
             return;
         }

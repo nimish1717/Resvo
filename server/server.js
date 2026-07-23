@@ -13,12 +13,12 @@ const bookingRouter = require('./routes/bookings.routes');
 const organizationsRouter = require('./routes/organizations.routes');
 const authRouter = require('./routes/auth.routes');
 const { startTokenCleanupWorker } = require('./services/tokenCleanupWorker');
-
-
+const { startBookingExpirationWorker } = require('./services/bookingExpirationWorker');
 
 const app = express();
 
 startTokenCleanupWorker();
+startBookingExpirationWorker();
 
 app.use(helmet());
 app.use(morgan('dev'));

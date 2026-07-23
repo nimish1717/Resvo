@@ -29,6 +29,8 @@ model bookings {
   suggestion_round  Int?                     @default(0)
   created_at        DateTime?                @default(now()) @db.Timestamptz(6)
   reason            String?
+  payment_status    String?                  @default("pending")
+  total_amount      Decimal?                 @db.Decimal
   superseded_by     String?                  @db.Uuid
   booking_actions   booking_actions[]
   halls             halls                    @relation(fields: [hall_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

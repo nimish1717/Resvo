@@ -16,7 +16,8 @@ const {
     noShowBooking,
     completeBooking,
     cancelBooking,
-    getMyBookings
+    getMyBookings,
+    simulatePayment
 } = require('../controllers/bookings.controller');
 
 const resolveOrgFromBookingId = async (req) => {
@@ -48,6 +49,7 @@ router.post('/:id/decline-suggestions', requireAuth, declineSuggestions);
 router.post('/:id/check-in', requireAuth, requireRole('org_admin', resolveOrgFromBookingId), checkInBooking);
 router.post('/:id/no-show', requireAuth, requireRole('org_admin', resolveOrgFromBookingId), noShowBooking);
 router.post('/:id/complete', requireAuth, requireRole('org_admin', resolveOrgFromBookingId), completeBooking);
-router.post('/:id/cancel', requireAuth, requireRole('org_admin', resolveOrgFromBookingId), cancelBooking);
+router.post('/:id/cancel', requireAuth, cancelBooking);
+router.post('/:id/pay', requireAuth, simulatePayment);
 
 module.exports = router;

@@ -2,12 +2,12 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../lib/authStore';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { CalendarDays, Heart, PlusCircle, ArrowRight, ShieldCheck, Clock, BookOpen, Search, Mail, ReceiptText } from 'lucide-react';
 
 export default function Page() {
     const user = useAuthStore(state => state.user);
     const authFetch = useAuthStore(state => state.authFetch);
-    const [organizations, setOrganizations] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -24,12 +24,6 @@ export default function Page() {
         async function fetchDashboardData() {
             if (!user) return;
             try {
-                // Fetch Organizations
-                const orgRes = await authFetch('/organizations/mine');
-                if (orgRes.response.ok) {
-                    setOrganizations(orgRes.data.organizations || []);
-                }
-
                 // Fetch Bookings
                 const bookRes = await authFetch('/bookings');
                 if (bookRes.response?.ok && bookRes.data?.bookings) {
@@ -45,6 +39,34 @@ export default function Page() {
     }, [authFetch, user]);
 
     const firstName = user?.name?.split(' ')[0] || 'User';
+
+    async function handleCancel(bookingId) {
+        if (!confirm('Are you sure you want to cancel this booking?')) return;
+        const { response } = await authFetch(`/bookings/${bookingId}/cancel`, { method: 'POST' });
+        if (response.ok) {
+            // refresh bookings
+            const bookRes = await authFetch('/bookings');
+            if (bookRes.response?.ok && bookRes.data?.bookings) {
+                setBookings(bookRes.data.bookings);
+                toast.success('Booking cancelled.');
+            }
+        } else {
+            toast.error('Could not cancel booking.');
+        }
+    }
+
+    async function handlePayment(bookingId) {
+        const { response, data } = await authFetch(`/bookings/${bookingId}/pay`, { method: 'POST' });
+        if (response.ok) {
+            toast.success('Payment Successful!');
+            const bookRes = await authFetch('/bookings');
+            if (bookRes.response?.ok && bookRes.data?.bookings) {
+                setBookings(bookRes.data.bookings);
+            }
+        } else {
+            toast.error(data?.message || 'Payment failed.');
+        }
+    }
 
     // Calculate Dynamic Stats
     const upcomingBookingsCount = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending' || b.status === 'approved' || b.status === 'requested').length || 0;
@@ -76,10 +98,6 @@ export default function Page() {
                 <div className="bg-card border border-border p-6 rounded-xl flex flex-col justify-between">
                     <h2 className="text-4xl font-medium mb-4">{bookings.length}</h2>
                     <p className="text-sm text-muted-foreground">Total Bookings</p>
-                </div>
-                <div className="bg-card border border-border p-6 rounded-xl flex flex-col justify-between">
-                    <h2 className="text-4xl font-medium mb-4">{organizations.length}</h2>
-                    <p className="text-sm text-muted-foreground">My Organizations</p>
                 </div>
                 <div className="bg-card border border-border p-6 rounded-xl flex flex-col justify-between">
                     <h2 className="text-4xl font-medium mb-4">₹{totalSpent.toLocaleString()}</h2>
@@ -122,6 +140,29 @@ export default function Page() {
                                         }`}>
                                             {booking.status.replace('_', ' ')}
                                         </span>
+                                        {booking.payment_status === 'pending' && booking.status === 'approved' && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 uppercase tracking-widest mt-1">
+                                                Payment Pending
+                                            </span>
+                                        )}
+                                        <div className="flex gap-3 items-center mt-2">
+                                            {booking.payment_status === 'pending' && booking.status === 'approved' && (
+                                                <button 
+                                                    onClick={() => handlePayment(booking.id)}
+                                                    className="text-xs font-semibold bg-primary text-primary-foreground px-3 py-1 rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+                                                >
+                                                    Pay Now
+                                                </button>
+                                            )}
+                                            {(booking.status === 'requested' || booking.status === 'approved') && (
+                                                <button 
+                                                    onClick={() => handleCancel(booking.id)}
+                                                    className="text-xs text-red-500 hover:text-red-700 hover:underline transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))
@@ -151,33 +192,16 @@ export default function Page() {
                     </div>
 
                     <div>
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-semibold">My Organizations</h3>
-                            <Link href="/dashboard/organizations" className="text-xs text-primary hover:underline flex items-center gap-1">
-                                Join/Create <PlusCircle className="w-3 h-3" />
+                        <div className="flex justify-between items-center mb-4 mt-8">
+                            <h3 className="text-lg font-semibold">Switch to Hosting</h3>
+                        </div>
+                        <div className="bg-card border border-border rounded-xl p-6 text-center shadow-sm">
+                            <h4 className="font-medium text-foreground mb-2">Are you a venue owner?</h4>
+                            <p className="text-sm text-muted-foreground mb-4">Manage your venues, view booking requests, and control your team from the Host Dashboard.</p>
+                            <Link href="/organization/dashboard" className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors px-6 py-2 rounded-lg font-medium text-sm inline-block w-full">
+                                Go to Host Dashboard
                             </Link>
                         </div>
-                        {loading ? (
-                            <div className="h-20 bg-muted animate-pulse rounded-xl"></div>
-                        ) : organizations.length > 0 ? (
-                            <div className="space-y-3">
-                                {organizations.map(org => (
-                                    <div key={org.id} className="bg-card border border-border rounded-xl p-4 flex justify-between items-center hover:border-primary transition-colors group">
-                                        <div>
-                                            <h4 className="font-medium text-sm line-clamp-1">{org.name}</h4>
-                                            <span className="text-xs text-muted-foreground capitalize">{org.myRole.replace('_', ' ')}</span>
-                                        </div>
-                                        <Link href="/organization/dashboard" className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                                            Manage <ArrowRight className="inline w-3 h-3" />
-                                        </Link>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="bg-card border border-border rounded-xl p-4 text-center text-sm text-muted-foreground">
-                                No organizations yet.
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>

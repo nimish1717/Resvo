@@ -14,7 +14,7 @@ async function getAllHalls(req, res) {
             halls = await prisma.halls.findMany({
                 where: {
                     organizations: {
-                        status: 'approved',
+                        status: { in: ['approved', 'pending'] },
                     },
                 },
                 orderBy: {

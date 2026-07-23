@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../lib/authStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Building2, Calendar as CalendarIcon, Users, Settings, Plus, Key, Clock, Check, X, Building, ChevronRight, MapPin } from 'lucide-react';
+import { Building2, Calendar as CalendarIcon, Users, Settings, Plus, Key, Clock, Check, X, Building, ChevronRight, MapPin, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function OrgDashboardPage() {
+    const router = useRouter();
     const authFetch = useAuthStore((state) => state.authFetch);
     const user = useAuthStore((state) => state.user);
     const loading = useAuthStore((state) => state.loading);
@@ -24,6 +26,8 @@ export default function OrgDashboardPage() {
     // Modals state
     const [deleteOrg, setDeleteOrg] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [auditBooking, setAuditBooking] = useState(null);
+    const [auditLoading, setAuditLoading] = useState(false);
 
     useEffect(() => {
         if (loading || !user) return;
@@ -112,6 +116,17 @@ export default function OrgDashboardPage() {
         }
     }
 
+    async function handleViewAudit(bookingId) {
+        setAuditLoading(true);
+        const { response, data } = await authFetch(`/bookings/${bookingId}`);
+        setAuditLoading(false);
+        if (response.ok && data.booking) {
+            setAuditBooking(data.booking);
+        } else {
+            setError('Could not load audit trail.');
+        }
+    }
+
     if (loading) return (
         <div className="flex justify-center items-center h-[60vh]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -121,9 +136,7 @@ export default function OrgDashboardPage() {
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="bg-red-50 dark:bg-red-950/20 p-6 rounded-xl border border-red-200 dark:border-red-900/50 text-center max-w-sm">
                 <p className="text-red-600 dark:text-red-300 mb-4 font-medium">Please log in to view your organizations.</p>
-                <Link href="/login">
-                    <Button variant="outline" className="border-red-200 hover:bg-red-100 dark:border-red-800 dark:hover:bg-red-900/50 w-full">Log in</Button>
-                </Link>
+                <Button variant="outline" onClick={() => router.push('/login')} className="border-red-200 hover:bg-red-100 dark:border-red-800 dark:hover:bg-red-900/50 w-full">Log in</Button>
             </div>
         </div>
     );
@@ -133,12 +146,13 @@ export default function OrgDashboardPage() {
             <div className="max-w-6xl mx-auto space-y-8">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight mb-2">Organization Dashboard</h1>
+                        <h1 className="text-3xl font-bold tracking-tight mb-2">Host Dashboard</h1>
                         <p className="text-muted-foreground">Manage your venues, bookings, and team members.</p>
                     </div>
-                    <Link href="/list-venue">
-                        <Button className="gap-2"><Plus className="w-4 h-4" /> Add Venue</Button>
-                    </Link>
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={() => router.push('/dashboard')}>Switch to Guest</Button>
+                        <Button onClick={() => router.push('/list-venue')} className="gap-2"><Plus className="w-4 h-4" /> Add Venue</Button>
+                    </div>
                 </div>
 
                 {error && <div className="p-4 bg-red-50 dark:bg-red-950/30 text-red-600 border border-red-200 dark:border-red-900/50 rounded-xl text-sm font-medium">{error}</div>}
@@ -153,9 +167,7 @@ export default function OrgDashboardPage() {
                             <p className="text-muted-foreground max-w-md mb-6">
                                 You don't administer any organizations or venues yet. Start by listing a venue to create your first organization.
                             </p>
-                            <Link href="/list-venue">
-                                <Button size="lg">List a Venue</Button>
-                            </Link>
+                                <Button onClick={() => router.push('/list-venue')} size="lg">List a Venue</Button>
                         </CardContent>
                     </Card>
                 ) : (
@@ -175,11 +187,9 @@ export default function OrgDashboardPage() {
                                                         <CardTitle className="text-xl">{org.name}</CardTitle>
                                                         {org.myRole === 'org_admin' && (
                                                             <div className="flex gap-2">
-                                                                <Link href={`/organization/dashboard/${org.id}`}>
-                                                                    <Button variant="outline" size="sm">
-                                                                        Manage
-                                                                    </Button>
-                                                                </Link>
+                                                                <Button variant="outline" size="sm" onClick={() => router.push(`/organization/dashboard/${org.id}`)}>
+                                                                    Manage
+                                                                </Button>
                                                                 <Button variant="destructive" size="sm" onClick={() => setDeleteOrg(org)}>
                                                                     Delete
                                                                 </Button>
@@ -317,11 +327,28 @@ export default function OrgDashboardPage() {
                                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                                                 booking.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                                                                 booking.status === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                                                booking.status === 'checked_in' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                                booking.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                                booking.status === 'no_show' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
                                                                 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                                             }`}>
                                                                 {booking.status.toUpperCase()}
                                                             </span>
+                                                            {booking.payment_status && (
+                                                                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium border ${
+                                                                    booking.payment_status === 'paid' ? 'border-green-300 text-green-600 bg-green-50' :
+                                                                    'border-orange-300 text-orange-600 bg-orange-50'
+                                                                }`}>
+                                                                    {booking.payment_status.toUpperCase()}
+                                                                </span>
+                                                            )}
                                                         </div>
+                                                        <button 
+                                                            onClick={() => handleViewAudit(booking.id)}
+                                                            className="text-xs text-primary hover:underline"
+                                                        >
+                                                            View Audit
+                                                        </button>
                                                     </div>
                                                     
                                                     {/* Booking Details usually go here (User info, Date, Time) */}
@@ -352,6 +379,41 @@ export default function OrgDashboardPage() {
                                                             </Button>
                                                         </div>
                                                     )}
+                                                    {booking.status === 'approved' && (
+                                                        <div className="flex gap-2 mt-2">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleDecision(booking.id, 'check-in')}
+                                                                disabled={actionLoadingId === booking.id}
+                                                                className="flex-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                                                            >
+                                                                Check In
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleDecision(booking.id, 'no-show')}
+                                                                disabled={actionLoadingId === booking.id}
+                                                                className="flex-1 bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800"
+                                                            >
+                                                                No Show
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                    {booking.status === 'checked_in' && (
+                                                        <div className="flex gap-2 mt-2">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleDecision(booking.id, 'complete')}
+                                                                disabled={actionLoadingId === booking.id}
+                                                                className="flex-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
+                                                            >
+                                                                Complete
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -378,6 +440,55 @@ export default function OrgDashboardPage() {
                         <div className="flex justify-end gap-2 p-6">
                             <Button variant="outline" onClick={() => setDeleteOrg(null)} disabled={isSubmitting}>Cancel</Button>
                             <Button variant="destructive" onClick={handleDeleteSubmit} disabled={isSubmitting}>Yes, Delete Organization</Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* Audit Modal */}
+            {auditBooking && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <Card className="w-full max-w-lg shadow-2xl border-border">
+                        <CardHeader className="border-b border-border pb-4">
+                            <CardTitle className="flex items-center gap-2 text-xl">
+                                <Clock className="w-5 h-5 text-primary" /> Booking Audit Trail
+                            </CardTitle>
+                            <CardDescription>
+                                Timeline of actions for booking ID {auditBooking.id.substring(0,8)}...
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6 max-h-[60vh] overflow-y-auto">
+                            {!auditBooking.actions || auditBooking.actions.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center italic">No actions recorded.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {auditBooking.actions.map((act, index) => (
+                                        <div key={act.id} className="flex gap-4 relative">
+                                            {/* Vertical line connecting timeline items */}
+                                            {index !== auditBooking.actions.length - 1 && (
+                                                <div className="absolute left-[11px] top-6 bottom-[-16px] w-[2px] bg-border"></div>
+                                            )}
+                                            <div className="w-6 h-6 rounded-full bg-primary/20 flex-shrink-0 flex items-center justify-center z-10 border border-primary/50">
+                                                <div className="w-2 h-2 rounded-full bg-primary"></div>
+                                            </div>
+                                            <div className="flex-1 pb-2">
+                                                <p className="text-sm font-semibold capitalize">{act.action.replace('_', ' ')}</p>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        by {act.acting_user_name || 'User'}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground font-mono">
+                                                        {new Date(act.created_at).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                        <div className="flex justify-end gap-2 p-6 border-t border-border bg-muted/30">
+                            <Button variant="outline" onClick={() => setAuditBooking(null)}>Close</Button>
                         </div>
                     </Card>
                 </div>

@@ -49,6 +49,13 @@ exports.getAllOrganizations = async (req, res) => {
                 },
                 _count: {
                     select: { halls: true }
+                },
+                organization_members: {
+                    include: {
+                        users: {
+                            select: { name: true, email: true }
+                        }
+                    }
                 }
             },
             orderBy: { created_at: 'desc' }

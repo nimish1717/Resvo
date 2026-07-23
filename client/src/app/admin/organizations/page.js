@@ -12,6 +12,7 @@ export default function AdminOrganizationsPage() {
   const [pageError, setPageError] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [viewOrg, setViewOrg] = useState(null);
 
   async function handleDecision(orgId, action) {
       setActionLoadingId(orgId);
@@ -114,6 +115,12 @@ export default function AdminOrganizationsPage() {
                                   </button>
                                 </>
                               )}
+                              <button 
+                                  onClick={() => setViewOrg(org)}
+                                  className="text-[10px] font-bold px-3 py-1.5 rounded border border-blue-500/30 text-blue-500 hover:bg-blue-500/10 transition-colors"
+                              >
+                                  View Details
+                              </button>
                           </div>
                       </td>
                     </tr>
@@ -122,6 +129,59 @@ export default function AdminOrganizationsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Details Modal */}
+          {viewOrg && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+              <div className="bg-[#15161b] border border-border/50 rounded-2xl w-full max-w-lg shadow-2xl p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold">{viewOrg.name}</h2>
+                    <p className="text-xs text-muted-foreground">Owner: {viewOrg.users?.name || 'Unknown'} ({viewOrg.users?.email || 'N/A'})</p>
+                  </div>
+                  <button onClick={() => setViewOrg(null)} className="text-muted-foreground hover:text-foreground">
+                    ✕
+                  </button>
+                </div>
+                
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 border-b border-border/30 pb-2">Team Members</h3>
+                    {viewOrg.organization_members && viewOrg.organization_members.length > 0 ? (
+                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                        {viewOrg.organization_members.map(member => (
+                          <div key={member.id} className="flex justify-between items-center bg-[#0f1014] p-3 rounded-lg border border-border/30">
+                            <div>
+                              <p className="font-bold text-sm">{member.users?.name}</p>
+                              <p className="text-xs text-muted-foreground">{member.users?.email}</p>
+                            </div>
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 bg-primary/10 text-primary rounded-md">
+                              {member.role.replace('_', ' ')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">No team members assigned.</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <div className="flex-1 bg-[#0f1014] p-4 rounded-lg border border-border/30 text-center">
+                      <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Total Venues</p>
+                      <p className="text-2xl font-bold">{viewOrg._count?.halls || 0}</p>
+                    </div>
+                    <div className="flex-1 bg-[#0f1014] p-4 rounded-lg border border-border/30 text-center">
+                      <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Current Status</p>
+                      <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded font-bold uppercase ${viewOrg.status === 'approved' ? 'bg-green-500/10 text-green-500' : viewOrg.status === 'rejected' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                        {viewOrg.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );

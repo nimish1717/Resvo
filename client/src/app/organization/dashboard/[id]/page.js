@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useAuthStore } from '../../../lib/authStore';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Plus, Key, Check, X } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 export default function ManageOrganizationPage({ params }) {
-    const { id } = params;
+    const { id } = use(params);
     const authFetch = useAuthStore((state) => state.authFetch);
     const user = useAuthStore((state) => state.user);
     const loading = useAuthStore((state) => state.loading);
@@ -37,6 +38,7 @@ export default function ManageOrganizationPage({ params }) {
         venue_tier: 'standard',
         location_area: ''
     });
+    const [hallPhotos, setHallPhotos] = useState([]);
 
     const openAddHallModal = () => {
         setEditHallData(null);
@@ -47,6 +49,7 @@ export default function ManageOrganizationPage({ params }) {
             venue_tier: 'standard',
             location_area: ''
         });
+        setHallPhotos([]);
         setIsHallModalOpen(true);
     };
 
@@ -59,6 +62,7 @@ export default function ManageOrganizationPage({ params }) {
             venue_tier: hall.venue_tier,
             location_area: hall.location_area
         });
+        setHallPhotos([]);
         setIsHallModalOpen(true);
     };
 
@@ -78,22 +82,27 @@ export default function ManageOrganizationPage({ params }) {
         fd.append('venueTier', hallFormData.venue_tier);
         fd.append('locationArea', hallFormData.location_area);
         
+        for (let i = 0; i < hallPhotos.length; i++) {
+            fd.append('photos', hallPhotos[i]);
+        }
+        
         if (!editHallData) {
             fd.append('organizationId', organization.id);
         }
 
         const { response, data } = await authFetch(url, {
             method,
-            body: fd
-        }, true); 
+            body: fd,
+            isFormData: true
+        }); 
         
         setIsSubmitting(false);
         if (response.ok) {
-            alert(editHallData ? 'Venue updated!' : 'Venue created!');
+            toast.success(editHallData ? 'Venue updated!' : 'Venue created!');
             setIsHallModalOpen(false);
             loadOrganization();
         } else {
-            alert(data?.message || 'Error saving venue');
+            toast.error(data?.message || 'Error saving venue');
         }
     };
 
@@ -101,9 +110,10 @@ export default function ManageOrganizationPage({ params }) {
         if (!confirm('Are you sure you want to permanently delete this venue? All associated bookings will be lost.')) return;
         const { response } = await authFetch(`/halls/${hallId}`, { method: 'DELETE' });
         if (response.ok) {
+            toast.success('Venue deleted successfully.');
             loadOrganization();
         } else {
-            alert('Could not delete venue');
+            toast.error('Could not delete venue');
         }
     };
 
@@ -169,9 +179,10 @@ export default function ManageOrganizationPage({ params }) {
         if (!confirm('Are you sure you want to remove this team member?')) return;
         const { response } = await authFetch(`/organizations/${organization.id}/co-admin/${userId}`, { method: 'DELETE' });
         if (response.ok) {
+            toast.success('Team member removed.');
             loadMembers(organization.id);
         } else {
-            alert('Could not remove team member');
+            toast.error('Could not remove team member');
         }
     }
 
@@ -184,10 +195,10 @@ export default function ManageOrganizationPage({ params }) {
         });
         setIsSubmitting(false);
         if (response.ok) {
-            alert('Organization name updated!');
+            toast.success('Organization name updated!');
             loadOrganization();
         } else {
-            alert(data?.message || 'Could not update organization');
+            toast.error(data?.message || 'Could not update organization');
         }
     }
 
@@ -305,7 +316,7 @@ export default function ManageOrganizationPage({ params }) {
                                 ) : (
                                     <div className="space-y-3">
                                         {members.map(member => (
-                                            <div key={member.id} className="flex justify-between items-center border p-3 rounded-md">
+                                            <div key={member.user_id} className="flex justify-between items-center border p-3 rounded-md">
                                                 <div>
                                                     <p className="font-medium text-sm">{member.users.name}</p>
                                                     <p className="text-xs text-muted-foreground">{member.users.email}</p>
@@ -403,6 +414,17 @@ export default function ManageOrganizationPage({ params }) {
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Location Area</label>
                                     <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" name="location_area" value={hallFormData.location_area} onChange={handleHallFormChange} required />
+                                </div>
+                                <div className="space-y-2 col-span-2">
+                                    <label className="text-sm font-medium">Photos (Max 2)</label>
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        multiple 
+                                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+                                        onChange={(e) => setHallPhotos(e.target.files)} 
+                                    />
+                                    {editHallData && <p className="text-xs text-muted-foreground mt-1">Leave empty to keep existing photos.</p>}
                                 </div>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
