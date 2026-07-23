@@ -3,9 +3,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-const generateTokens = async (userId, email, isSuperAdmin) => {
+const generateTokens = async (userId, email, isSuperAdmin, role) => {
+    const finalRole = isSuperAdmin ? 'SUPER_ADMIN' : role;
     const token = jwt.sign(
-        { userId, email, isSuperAdmin },
+        { userId, email, role: finalRole },
         process.env.JWT_SECRET,
         { expiresIn: '15m' }
     );
@@ -19,19 +20,7 @@ const generateTokens = async (userId, email, isSuperAdmin) => {
     return { token, refreshToken };
 }
 
-const getRole = async (userId, isSuperAdmin) => {
-    if (isSuperAdmin) return "SUPER_ADMIN";
-    const orgAdmin = await prisma.organization_members.findFirst({
-        where: {
-            user_id: userId,
-            role: { in: ['org_admin', 'org_owner'] }
-        }
-    });
-    if (orgAdmin) return "ORG_ADMIN";
-    return "USER";
-};
-
-const signup = async (req, res) => {
+const userSignup = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
@@ -64,11 +53,12 @@ const signup = async (req, res) => {
                 name,
                 email,
                 password_hash: passwordHash,
+                role: 'USER'
             },
         });
 
         const isSuperAdmin = user.email === process.env.SUPER_ADMIN_EMAIL;
-        const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin);
+        const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin, user.role);
 
         const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, { 
@@ -78,17 +68,17 @@ const signup = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
-        const role = await getRole(user.id, isSuperAdmin);
+        const finalRole = isSuperAdmin ? 'SUPER_ADMIN' : user.role;
 
         return res.status(201).json({
             status: true,
-            message: 'Account created successfully',
-            user: { id: user.id, name: user.name, email: user.email, role },
+            message: 'User account created successfully',
+            user: { id: user.id, name: user.name, email: user.email, role: finalRole },
             token
         });
 
     } catch (error) {
-        console.error('Error in signup:', error);
+        console.error('Error in userSignup:', error);
         return res.status(500).json({
             status: false,
             message: 'Something went wrong while creating the account',
@@ -96,6 +86,88 @@ const signup = async (req, res) => {
         });
     }
 }
+
+const orgAdminSignup = async (req, res) => {
+    try {
+        const { name, email, password, phone, organizationName } = req.body;
+
+        if (!name || !email || !password || !phone || !organizationName) {
+            return res.status(400).json({
+                status: false,
+                message: 'name, email, password, phone, and organizationName are required'
+            });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({
+                status: false,
+                message: 'Password must be at least 8 characters'
+            });
+        }
+
+        const existing = await prisma.users.findUnique({ where: { email } });
+        if (existing) {
+            return res.status(409).json({
+                status: false,
+                message: 'An account with this email already exists'
+            });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Transaction to create user and organization
+        const user = await prisma.$transaction(async (tx) => {
+            const newUser = await tx.users.create({
+                data: {
+                    name,
+                    email,
+                    phone,
+                    password_hash: passwordHash,
+                    role: 'ORG_ADMIN'
+                }
+            });
+
+            await tx.organizations.create({
+                data: {
+                    name: organizationName,
+                    owner_user_id: newUser.id,
+                    status: 'pending'
+                }
+            });
+
+            return newUser;
+        });
+
+        const isSuperAdmin = user.email === process.env.SUPER_ADMIN_EMAIL;
+        const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin, user.role);
+
+        const isProd = process.env.NODE_ENV === 'production';
+        res.cookie('refreshToken', refreshToken, { 
+            httpOnly: true, 
+            secure: isProd, 
+            sameSite: isProd ? 'none' : 'lax', 
+            maxAge: 7 * 24 * 60 * 60 * 1000 
+        });
+
+        const finalRole = isSuperAdmin ? 'SUPER_ADMIN' : user.role;
+
+        return res.status(201).json({
+            status: true,
+            message: 'Organization Admin account created successfully. Awaiting Super Admin approval.',
+            user: { id: user.id, name: user.name, email: user.email, role: finalRole },
+            token
+        });
+
+    } catch (error) {
+        console.error('Error in orgAdminSignup:', error);
+        return res.status(500).json({
+            status: false,
+            message: 'Something went wrong while creating the organization account',
+            error: error.message
+        });
+    }
+}
+
 
 const login = async (req, res) => {
     try {
@@ -110,14 +182,7 @@ const login = async (req, res) => {
 
         const user = await prisma.users.findUnique({ where: { email } });
 
-        if (!user) {
-            return res.status(200).json({
-                status: false,
-                message: 'Invalid email or password'
-            });
-        }
-
-        if (!user.password_hash) {
+        if (!user || !user.password_hash) {
             return res.status(200).json({
                 status: false,
                 message: 'Invalid email or password'
@@ -133,7 +198,7 @@ const login = async (req, res) => {
         }
 
         const isSuperAdmin = user.email === process.env.SUPER_ADMIN_EMAIL;
-        const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin);
+        const { token, refreshToken } = await generateTokens(user.id, user.email, isSuperAdmin, user.role);
 
         const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, { 
@@ -143,12 +208,12 @@ const login = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
-        const role = await getRole(user.id, isSuperAdmin);
+        const finalRole = isSuperAdmin ? 'SUPER_ADMIN' : user.role;
 
         return res.status(200).json({
             status: true,
             message: 'Login successful',
-            user: { id: user.id, name: user.name, email: user.email, role },
+            user: { id: user.id, name: user.name, email: user.email, role: finalRole },
             token
         });
 
@@ -188,7 +253,7 @@ const refresh = async (req, res) => {
             return res.status(200).json({ status: false, message: 'Refresh token expired' });
         }
 
-        // Theft Detection: only if it was revoked due to rotation
+        // Theft Detection
         if (dbToken.revoked && dbToken.revoked_reason === 'rotated') {
             await prisma.$queryRaw`UPDATE refresh_tokens SET revoked = true WHERE user_id = ${dbToken.user_id}::uuid`;
             return res.status(200).json({ status: false, message: 'Token theft detected. All sessions revoked.' });
@@ -200,14 +265,14 @@ const refresh = async (req, res) => {
         await prisma.$queryRaw`UPDATE refresh_tokens SET revoked = true, revoked_reason = 'rotated' WHERE id = ${dbToken.id}::uuid`;
 
         // Get user details
-        const users = await prisma.$queryRaw`SELECT id, name, email FROM users WHERE id = ${dbToken.user_id}::uuid`;
+        const users = await prisma.$queryRaw`SELECT id, name, email, role FROM users WHERE id = ${dbToken.user_id}::uuid`;
         if (users.length === 0) return res.status(404).json({ status: false, message: 'User not found' });
         const user = users[0];
 
         const isSuperAdmin = user.email === process.env.SUPER_ADMIN_EMAIL;
 
         // Generate new pair
-        const newTokens = await generateTokens(user.id, user.email, isSuperAdmin);
+        const newTokens = await generateTokens(user.id, user.email, isSuperAdmin, user.role);
 
         const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', newTokens.refreshToken, { 
@@ -217,13 +282,13 @@ const refresh = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
-        const role = await getRole(user.id, isSuperAdmin);
+        const finalRole = isSuperAdmin ? 'SUPER_ADMIN' : user.role;
 
         return res.status(200).json({
             status: true,
             message: 'Token refreshed successfully',
             token: newTokens.token,
-            user: { id: user.id, name: user.name, email: user.email, role }
+            user: { id: user.id, name: user.name, email: user.email, role: finalRole }
         });
 
     } catch (error) {
@@ -258,7 +323,8 @@ const logout = async (req, res) => {
 }
 
 module.exports = {
-    signup,
+    userSignup,
+    orgAdminSignup,
     login,
     refresh,
     logout

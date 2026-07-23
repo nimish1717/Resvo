@@ -6,6 +6,7 @@ CREATE TABLE users (
     name          TEXT NOT NULL,
     email         TEXT UNIQUE NOT NULL,
     phone         TEXT,
+    role          TEXT NOT NULL DEFAULT 'USER',
     password_hash TEXT NOT NULL DEFAULT '',
     created_at    TIMESTAMPTZ DEFAULT now()
 );
@@ -14,21 +15,8 @@ CREATE TABLE organizations (
     id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_user_id          UUID NOT NULL REFERENCES users(id),
     name                   TEXT NOT NULL,
-    status                 TEXT NOT NULL CHECK (status IN
-                             ('pending','approved','rejected','changes_requested','suspended'))
-                             DEFAULT 'pending',
-    invite_code            TEXT UNIQUE,
-    invite_code_expires_at TIMESTAMPTZ,
+    status                 TEXT NOT NULL CHECK (status IN ('pending','approved','rejected')) DEFAULT 'pending',
     created_at             TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE organization_join_requests (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id),
-    user_id         UUID NOT NULL REFERENCES users(id),
-    status          TEXT NOT NULL CHECK (status IN ('pending','approved','rejected')) DEFAULT 'pending',
-    created_at      TIMESTAMPTZ DEFAULT now(),
-    UNIQUE (organization_id, user_id)
 );
 
 CREATE TABLE halls (
@@ -39,14 +27,8 @@ CREATE TABLE halls (
     capacity        INT NOT NULL,
     venue_tier      TEXT NOT NULL CHECK (venue_tier IN ('budget','standard','premium')),
     price_per_slot  NUMERIC NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending',
     created_at      TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE organization_members (
-    organization_id UUID NOT NULL REFERENCES organizations(id),
-    user_id         UUID NOT NULL REFERENCES users(id),
-    role            TEXT NOT NULL CHECK (role IN ('org_admin','co_admin')),
-    PRIMARY KEY (organization_id, user_id)
 );
 
 CREATE TABLE bookings (

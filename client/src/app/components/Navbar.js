@@ -37,7 +37,7 @@ export default function Navbar() {
                         
                         {loading ? null : user ? (
                             <div className="flex items-center gap-4">
-                                <Link href="/dashboard" className="hidden sm:inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-medium transition-colors bg-[#E2C391] text-black shadow hover:bg-[#E2C391]/90 h-10 px-6 py-2">
+                                <Link href={user.role === 'ORG_ADMIN' ? '/organization/dashboard' : user.role === 'SUPER_ADMIN' ? '/admin/dashboard' : '/dashboard'} className="hidden sm:inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-medium transition-colors bg-[#E2C391] text-black shadow hover:bg-[#E2C391]/90 h-10 px-6 py-2">
                                     Dashboard
                                 </Link>
                                 <div className="relative group">

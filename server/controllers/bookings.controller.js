@@ -2,6 +2,7 @@ const prisma = require('../lib/prismaClient');
 const redis = require('../lib/redisClient');
 const { invalidateSearchCache } = require('../lib/cache');
 const { findSameHallSameDaySlots, findDifferentHallSameTime, findSameHallNextDays } = require('../utils/suggestionLogic');
+const { logOrganizationActivity } = require('../lib/activityLogger');
 
 const createBooking = async (req, res) => {
     try {
@@ -155,6 +156,7 @@ const approveBooking = async (req, res) => {
                 UPDATE bookings
                 SET status = 'approved', payment_status = 'pending'
                 WHERE id = ${id}::uuid AND status = 'requested'
+                AND hall_id IN (SELECT id FROM halls WHERE organization_id = ${req.organization.id}::uuid)
                 RETURNING id, hall_id, requested_by, status, time_range::text;
             `;
 
@@ -172,6 +174,7 @@ const approveBooking = async (req, res) => {
 
         // Invalidate search cache because availability changed
         await invalidateSearchCache();
+        await logOrganizationActivity(req.organization.id, 'Booking approved', `Booking #${id} was approved`);
 
         res.status(200).json({ status: true, message: 'Booking approved', booking });
     } catch (error) {
@@ -210,6 +213,7 @@ const rejectBooking = async (req, res) => {
                 UPDATE bookings
                 SET status = 'rejected'
                 WHERE id = ${id}::uuid AND status = 'requested'
+                AND hall_id IN (SELECT id FROM halls WHERE organization_id = ${req.organization.id}::uuid)
                 RETURNING id, hall_id, requested_by, status, time_range::text;
             `;
 
@@ -225,6 +229,7 @@ const rejectBooking = async (req, res) => {
             return updated[0];
         });
 
+        await logOrganizationActivity(req.organization.id, 'Booking rejected', `Booking #${id} was rejected`);
         res.status(200).json({ status: true, message: 'Booking rejected', booking });
     } catch (error) {
         if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_PENDING') {
@@ -402,6 +407,7 @@ const checkInBooking = async (req, res) => {
                 UPDATE bookings
                 SET status = 'checked_in'
                 WHERE id = ${id}::uuid AND status = 'approved'
+                AND hall_id IN (SELECT id FROM halls WHERE organization_id = ${req.organization.id}::uuid)
                 RETURNING id, hall_id, requested_by, status, time_range::text;
             `;
 
@@ -417,6 +423,7 @@ const checkInBooking = async (req, res) => {
             return updated[0];
         });
 
+        await logOrganizationActivity(req.organization.id, 'Booking checked in', `Guest checked into booking #${id}`);
         res.status(200).json({ status: true, message: 'Booking checked in', booking });
     } catch (error) {
         if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_APPROVED') {
@@ -443,6 +450,7 @@ const noShowBooking = async (req, res) => {
                 UPDATE bookings
                 SET status = 'no_show'
                 WHERE id = ${id}::uuid AND status = 'approved'
+                AND hall_id IN (SELECT id FROM halls WHERE organization_id = ${req.organization.id}::uuid)
                 RETURNING id, hall_id, requested_by, status, time_range::text;
             `;
 
@@ -459,7 +467,8 @@ const noShowBooking = async (req, res) => {
         });
 
         await invalidateSearchCache();
-
+        
+        await logOrganizationActivity(req.organization.id, 'Booking no-show', `Guest no-show for booking #${id}`);
         res.status(200).json({ status: true, message: 'Booking marked as no-show', booking });
     } catch (error) {
         if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_APPROVED') {
@@ -486,6 +495,7 @@ const completeBooking = async (req, res) => {
                 UPDATE bookings
                 SET status = 'completed'
                 WHERE id = ${id}::uuid AND status IN ('approved', 'checked_in')
+                AND hall_id IN (SELECT id FROM halls WHERE organization_id = ${req.organization.id}::uuid)
                 RETURNING id, hall_id, requested_by, status, time_range::text;
             `;
 
@@ -502,7 +512,8 @@ const completeBooking = async (req, res) => {
         });
 
         await invalidateSearchCache();
-
+        
+        await logOrganizationActivity(req.organization.id, 'Booking completed', `Booking #${id} completed`);
         res.status(200).json({ status: true, message: 'Booking completed', booking });
     } catch (error) {
         if (error.message === 'BOOKING_NOT_FOUND_OR_NOT_VALID_STATE') {

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAuth, requireRole } = require('../middleware/auth.middleware');
+const { requireAuth, verifySuperAdmin } = require('../middleware/auth.middleware');
 const {
     getAllUsers,
     getAllOrganizations,
@@ -12,7 +12,7 @@ const {
 
 // All routes require SUPER_ADMIN
 router.use(requireAuth);
-router.use(requireRole('super_admin'));
+router.use(verifySuperAdmin);
 
 router.get('/users', getAllUsers);
 router.get('/organizations', getAllOrganizations);

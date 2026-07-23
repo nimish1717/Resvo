@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -145,26 +146,7 @@ export default function AdminOrganizationsPage() {
                 </div>
                 
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 border-b border-border/30 pb-2">Team Members</h3>
-                    {viewOrg.organization_members && viewOrg.organization_members.length > 0 ? (
-                      <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {viewOrg.organization_members.map(member => (
-                          <div key={member.id} className="flex justify-between items-center bg-[#0f1014] p-3 rounded-lg border border-border/30">
-                            <div>
-                              <p className="font-bold text-sm">{member.users?.name}</p>
-                              <p className="text-xs text-muted-foreground">{member.users?.email}</p>
-                            </div>
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 bg-primary/10 text-primary rounded-md">
-                              {member.role.replace('_', ' ')}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">No team members assigned.</p>
-                    )}
-                  </div>
+
                   
                   <div className="flex gap-4">
                     <div className="flex-1 bg-[#0f1014] p-4 rounded-lg border border-border/30 text-center">

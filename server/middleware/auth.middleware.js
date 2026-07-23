@@ -25,68 +25,73 @@ const requireAuth = (req, res, next) => {
     }
 }
 
-const requireRole = (role, resolveOrganizationId) => {
-    return async (req, res, next) => {
-        try {
-            if (role === 'super_admin') {
-                if (!req.user?.isSuperAdmin) {
-                    return res.status(403).json({
-                        status: false,
-                        message: 'Super Admin access required'
-                    });
-                }
-                return next();
-            }
+const verifySuperAdmin = (req, res, next) => {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({
+            status: false,
+            message: 'Super Admin access required'
+        });
+    }
+    next();
+};
 
-            if (role === 'org_admin' || role === 'org_owner') {
-                const organizationId = await resolveOrganizationId(req);
-
-                if (!organizationId) {
-                    return res.status(404).json({
-                        status: false,
-                        message: 'Could not determine the organization for this request'
-                    });
-                }
-
-                const membership = await prisma.organization_members.findUnique({
-                    where: {
-                        organization_id_user_id: {
-                            organization_id: organizationId,
-                            user_id: req.user.userId,
-                        },
-                    },
-                });
-
-                if (!membership) {
-                    return res.status(403).json({
-                        status: false,
-                        message: 'You do not have admin access to this organization'
-                    });
-                }
-
-                if (role === 'org_owner' && membership.role !== 'org_admin') {
-                    return res.status(403).json({
-                        status: false,
-                        message: 'Only the Organization Admin can manage membership'
-                    });
-                }
-
-                req.organizationId = organizationId;
-                return next();
-            }
-
-            return res.status(500).json({
+const verifyOrgAdmin = async (req, res, next) => {
+    try {
+        if (req.user?.role !== 'ORG_ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({
                 status: false,
-                message: `Unknown role passed to requireRole: "${role}"`
-            });
-        } catch (err) {
-            console.error('Error checking role:', err);
-            return res.status(500).json({
-                status: false,
-                message: 'Something went wrong while checking permissions'
+                message: 'Organization Admin access required'
             });
         }
-    };
-}
 
-module.exports = { requireAuth, requireRole };
+        // Find the organization owned by this user
+        const organization = await prisma.organizations.findFirst({
+            where: { owner_user_id: req.user.userId }
+        });
+
+        if (!organization) {
+            return res.status(404).json({
+                status: false,
+                message: 'No organization found for this admin'
+            });
+        }
+
+
+        req.organization = organization;
+        next();
+    } catch (err) {
+        console.error('Error in verifyOrgAdmin middleware:', err);
+        return res.status(500).json({
+            status: false,
+            message: 'Internal server error verifying organization access'
+        });
+    }
+};
+
+const verifyApprovedOrgAdmin = async (req, res, next) => {
+    // This assumes verifyOrgAdmin is called first
+    if (!req.organization) {
+        return res.status(403).json({
+            status: false,
+            message: 'Organization Admin access required'
+        });
+    }
+
+    if (req.organization.status === 'pending') {
+        return res.status(403).json({
+            status: false,
+            message: 'Your organization is pending approval by a Super Admin.'
+        });
+    }
+    
+    if (req.organization.status === 'rejected') {
+        return res.status(403).json({
+            status: false,
+            message: 'Your organization request has been rejected.'
+        });
+    }
+
+    next();
+};
+
+module.exports = { requireAuth, verifySuperAdmin, verifyOrgAdmin, verifyApprovedOrgAdmin };

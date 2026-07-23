@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react/no-unescaped-entities */
 'use client';
 import Link from 'next/link';
 import { Search, MapPin, Calendar, Users, ArrowRight, Sparkles, Star, Building, Users2, CalendarCheck } from 'lucide-react';

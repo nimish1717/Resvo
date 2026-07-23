@@ -8,31 +8,12 @@ exports.getAllUsers = async (req, res) => {
                 id: true,
                 name: true,
                 email: true,
-                phone: true,
-                created_at: true,
-                organization_members: {
-                    include: {
-                        organizations: true
-                    }
-                }
+                role: true,
             },
             orderBy: { created_at: 'desc' }
         });
-        
-        // Transform the role based on org_members
-        const formattedUsers = users.map(user => {
-            let role = 'User';
-            if (user.organization_members.some(m => m.role === 'org_owner' || m.role === 'org_admin')) {
-                role = 'Org Admin';
-            }
-            if (user.id === '337e6d42-2b63-42eb-be1e-d4eb61ccdbda') {
-                 // Hardcoded super admin check if needed, or rely on other logic
-                role = 'Super Admin';
-            }
-            return { ...user, role };
-        });
 
-        res.json({ users: formattedUsers });
+        res.json({ users });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch users' });
@@ -49,13 +30,6 @@ exports.getAllOrganizations = async (req, res) => {
                 },
                 _count: {
                     select: { halls: true }
-                },
-                organization_members: {
-                    include: {
-                        users: {
-                            select: { name: true, email: true }
-                        }
-                    }
                 }
             },
             orderBy: { created_at: 'desc' }

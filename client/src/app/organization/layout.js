@@ -4,6 +4,7 @@ import { useAuthStore } from '../lib/authStore';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { LayoutDashboard, Building2, CalendarDays, BarChart3, Settings } from 'lucide-react';
 
 export default function Layout({ children }) {
   const user = useAuthStore(state => state.user);
@@ -45,23 +46,21 @@ export default function Layout({ children }) {
           </Link>
         </div>
 
-        <div className="px-4 pb-4">
-            <div className="bg-muted/30 p-1 rounded-lg flex border border-border/50">
-               <Link href="/dashboard" className="flex-1 text-center text-xs font-bold py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors">
-                  User Dashboard
-               </Link>
-               <Link href="/organization/dashboard" className="flex-1 text-center text-xs font-bold py-2 rounded-md bg-primary text-primary-foreground shadow-sm">
-                  Org Dashboard
-               </Link>
-            </div>
-        </div>
-        
         <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-hide py-2">
           <Link href="/organization/dashboard" className={getLinkClass('/organization/dashboard')}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg> Dashboard
+            <LayoutDashboard className="w-5 h-5" /> Dashboard
           </Link>
-          <Link href="/dashboard/organizations" className={getLinkClass('/dashboard/organizations')}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg> Manage Teams
+          <Link href="/organization/halls" className={getLinkClass('/organization/halls')}>
+            <Building2 className="w-5 h-5" /> Halls
+          </Link>
+          <Link href="/organization/bookings" className={getLinkClass('/organization/bookings')}>
+            <CalendarDays className="w-5 h-5" /> Bookings
+          </Link>
+          <Link href="/organization/analytics" className={getLinkClass('/organization/analytics')}>
+            <BarChart3 className="w-5 h-5" /> Analytics
+          </Link>
+          <Link href="/organization/settings" className={getLinkClass('/organization/settings')}>
+            <Settings className="w-5 h-5" /> Settings
           </Link>
         </nav>
         

@@ -27,6 +27,17 @@ export const useAuthStore = create((set, get) => ({
         return { response, data };
     },
 
+    orgAdminSignup: async (name, email, password, phone, organizationName) => {
+        const { response, data } = await apiFetch('/auth/org-signup', {
+            method: 'POST',
+            body: JSON.stringify({ name, email, password, phone, organizationName }),
+        });
+        if (response.ok) {
+            set({ accessToken: data.token, user: data.user });
+        }
+        return { response, data };
+    },
+
     login: async (email, password) => {
         const { response, data } = await apiFetch('/auth/login', {
             method: 'POST',

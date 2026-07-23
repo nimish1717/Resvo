@@ -1,3 +1,7 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react/no-unescaped-entities */
 'use client';
 
 import { useEffect, useState } from 'react';

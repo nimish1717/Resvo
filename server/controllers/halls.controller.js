@@ -2,6 +2,7 @@ const prisma = require('../lib/prismaClient');
 const redis = require('../lib/redisClient');
 const { getCachedHalls, setCachedHalls, invalidateHallsCache } = require('../lib/cache');
 const cloudinary = require('../lib/cloudinary');
+const { logOrganizationActivity } = require('../lib/activityLogger');
 
 async function getAllHalls(req, res) {
     try {
@@ -59,7 +60,8 @@ async function getHallById(req, res) {
 
 const createHall = async (req, res) => {
     try {
-        const { organizationId, name, locationArea, capacity, venueTier, pricePerSlot } = req.body;
+        const organizationId = req.organization.id;
+        const { name, locationArea, capacity, venueTier, pricePerSlot } = req.body;
 
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ status: false, message: 'At least 1 photo is required' });
@@ -68,10 +70,10 @@ const createHall = async (req, res) => {
             return res.status(400).json({ status: false, message: 'Maximum 2 photos allowed' });
         }
 
-        if (!organizationId || !name || !locationArea || !capacity || !venueTier || !pricePerSlot) {
+        if (!name || !locationArea || !capacity || !venueTier || !pricePerSlot) {
             return res.status(400).json({
                 status: false,
-                message: 'organizationId, name, locationArea, capacity, venueTier, and pricePerSlot are all required',
+                message: 'name, locationArea, capacity, venueTier, and pricePerSlot are all required',
             });
         }
 
@@ -83,13 +85,7 @@ const createHall = async (req, res) => {
             });
         }
 
-        const organization = await prisma.organizations.findUnique({ where: { id: organizationId } });
-        if (!organization) {
-            return res.status(404).json({
-                status: false,
-                message: 'Organization not found'
-            });
-        }
+        // Organization is already checked and guaranteed by verifyOrgAdmin middleware
 
         // Upload images to Cloudinary
         const uploadPromises = req.files.map(file => {
@@ -121,6 +117,8 @@ const createHall = async (req, res) => {
 
         // Invalidate halls cache because a new hall was created
         await invalidateHallsCache();
+        
+        await logOrganizationActivity(organizationId, 'Hall created', `Added new hall: ${name}`);
 
         return res.status(201).json({
             status: true,
@@ -208,6 +206,7 @@ const updateHall = async (req, res) => {
         });
 
         await invalidateHallsCache();
+        await logOrganizationActivity(existing.organization_id, 'Hall updated', `Updated hall: ${existing.name}`);
 
         return res.status(200).json({ status: true, message: 'Hall updated successfully', hall });
     } catch (error) {
@@ -218,6 +217,11 @@ const updateHall = async (req, res) => {
 const deleteHall = async (req, res) => {
     try {
         const { id } = req.params;
+        
+        const existing = await prisma.halls.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ status: false, message: 'Hall not found' });
+        }
 
         await prisma.$transaction(async (tx) => {
             // Delete booking actions
@@ -229,6 +233,7 @@ const deleteHall = async (req, res) => {
         });
 
         await invalidateHallsCache();
+        await logOrganizationActivity(existing.organization_id, 'Hall deleted', `Deleted hall: ${existing.name}`);
 
         return res.status(200).json({ status: true, message: 'Hall deleted successfully' });
     } catch (error) {

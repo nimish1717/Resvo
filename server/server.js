@@ -12,6 +12,8 @@ const hallsRouter = require('./routes/halls.routes');
 const bookingRouter = require('./routes/bookings.routes');
 const organizationsRouter = require('./routes/organizations.routes');
 const authRouter = require('./routes/auth.routes');
+const adminRouter = require('./routes/admin.routes');
+const statsRouter = require('./routes/stats.routes');
 const { startTokenCleanupWorker } = require('./services/tokenCleanupWorker');
 const { startBookingExpirationWorker } = require('./services/bookingExpirationWorker');
 
@@ -52,25 +54,12 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'Resvo API is running' });
 });
 
-app.get('/api/stats', async (req, res) => {
-    try {
-        const [halls, organizations, bookings] = await Promise.all([
-            prisma.halls.count(),
-            prisma.organizations.count({ where: { status: 'approved' } }),
-            prisma.bookings.count({ where: { status: { in: ['approved', 'checked_in', 'completed'] } } })
-        ]);
-        res.json({ halls, organizations, bookings });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch stats' });
-    }
-});
-
-
 app.use('/api/halls', hallsRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/organizations", organizationsRouter);
 app.use("/api/auth", authRouter);
-app.use("/api/admin", require('./routes/admin.routes'));
+app.use("/api/admin", adminRouter);
+app.use("/api/stats", statsRouter);
 
 
 const PORT = process.env.PORT || 4000;
