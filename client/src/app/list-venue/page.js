@@ -1,7 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../lib/authStore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -25,6 +25,25 @@ export default function ListVenuePage() {
     const [hallResult, setHallResult] = useState(null);
     const [hallError, setHallError] = useState('');
     const [hallSubmitting, setHallSubmitting] = useState(false);
+    const [loadingOrg, setLoadingOrg] = useState(true);
+
+    useEffect(() => {
+        async function checkExistingOrg() {
+            if (user?.role === 'ORG_ADMIN') {
+                const { response, data } = await authFetch('/organizations/mine');
+                if (response.ok && data.organization) {
+                    setOrgResult(data.organization);
+                }
+            }
+            setLoadingOrg(false);
+        }
+
+        if (user) {
+            checkExistingOrg();
+        } else {
+            setLoadingOrg(false);
+        }
+    }, [user, authFetch]);
 
     async function handleOrgSubmit(e) {
         e.preventDefault();
@@ -116,7 +135,11 @@ export default function ListVenuePage() {
                         <CardDescription>Submit your business for review. A Super Admin approves it before your halls become publicly visible.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {!orgResult ? (
+                        {loadingOrg ? (
+                            <div className="py-4 flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                            </div>
+                        ) : !orgResult ? (
                             <form onSubmit={handleOrgSubmit} className="flex flex-col gap-4">
                                 <div className="space-y-1">
                                     <label className="text-sm font-medium text-foreground">Organization / Business Name</label>
@@ -137,9 +160,9 @@ export default function ListVenuePage() {
                             <div className="flex items-start gap-3 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-900/50">
                                 <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold">"{orgResult.name}" submitted successfully</p>
+                                    <p className="font-semibold">"{orgResult.name}" is your active organization</p>
                                     <p className="text-sm text-green-600 dark:text-green-500 mt-1">
-                                        Status: <span className="font-mono uppercase font-bold">{orgResult.status}</span>. You can proceed to add halls now.
+                                        Status: <span className="font-mono uppercase font-bold">{orgResult.status}</span>. You can add halls below.
                                     </p>
                                 </div>
                             </div>
@@ -217,9 +240,9 @@ export default function ListVenuePage() {
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     {hallError && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/20 p-2 rounded border border-red-100 dark:border-red-900/50 mt-2">{hallError}</p>}
-                                    
+
                                     <Button type="submit" disabled={hallSubmitting} size="lg" className="mt-4 w-full md:w-auto self-end">
                                         {hallSubmitting ? 'Adding Venue...' : 'Add Venue to Organization'}
                                     </Button>
@@ -232,7 +255,7 @@ export default function ListVenuePage() {
                                         <p className="text-sm text-green-600 dark:text-green-500 mt-1 mb-3">
                                             Your venue is now pending organization approval.
                                         </p>
-                                        <Link href="/dashboard/organizations">
+                                        <Link href="/organization/dashboard">
                                             <Button variant="outline" className="border-green-200 hover:bg-green-100 dark:border-green-800 dark:hover:bg-green-900/50 text-green-800 dark:text-green-300">
                                                 Go to Dashboard
                                             </Button>

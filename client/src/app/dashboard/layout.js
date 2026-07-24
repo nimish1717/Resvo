@@ -46,18 +46,7 @@ export default function Layout({ children }) {
           </Link>
         </div>
 
-        <div className="px-4 pb-4">
-            <div className="bg-muted/30 p-1 rounded-lg flex border border-border/50">
-               <Link href="/dashboard" className="flex-1 text-center text-xs font-bold py-2 rounded-md bg-primary text-primary-foreground shadow-sm">
-                  User Dashboard
-               </Link>
-               <Link href="/organization/dashboard" className="flex-1 text-center text-xs font-bold py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors">
-                  Org Dashboard
-               </Link>
-            </div>
-        </div>
-        
-        <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-hide py-2">
+        <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-hide py-2 mt-4">
           <Link href="/dashboard" className={getLinkClass('/dashboard')}>
             <LayoutDashboard className="w-5 h-5" /> Dashboard
           </Link>

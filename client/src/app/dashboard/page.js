@@ -11,6 +11,7 @@ export default function Page() {
     const authFetch = useAuthStore(state => state.authFetch);
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
+    const router = require('next/navigation').useRouter();
 
     const formatTimeRange = (rangeStr) => {
         if (!rangeStr) return '';
@@ -22,6 +23,11 @@ export default function Page() {
     };
 
     useEffect(() => {
+        if (user?.role === 'ORG_ADMIN' || user?.role === 'SUPER_ADMIN') {
+            router.push('/organization/dashboard');
+            return;
+        }
+
         async function fetchDashboardData() {
             if (!user) return;
             try {

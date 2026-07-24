@@ -101,16 +101,27 @@ const getBookingsByHall = async (req, res) => {
     try {
         const { hallId } = req.params;
         const result = await prisma.$queryRaw`
-            SELECT id, hall_id, requested_by, status, time_range::text, created_at, payment_status, total_amount
-            FROM bookings
-            WHERE hall_id = ${hallId}::uuid
-            ORDER BY created_at DESC;
+            SELECT b.id, b.hall_id, b.requested_by, b.status, b.time_range::text, b.created_at, b.payment_status, b.total_amount,
+                   u.name as user_name, u.email as user_email
+            FROM bookings b
+            LEFT JOIN users u ON b.requested_by = u.id
+            WHERE b.hall_id = ${hallId}::uuid
+            ORDER BY b.created_at DESC;
         `;
+
+        // Format it so the frontend can read booking.users.name
+        const bookings = result.map(b => ({
+            ...b,
+            users: {
+                name: b.user_name,
+                email: b.user_email
+            }
+        }));
 
         return res.status(200).json({
             status: true,
             message: 'Bookings fetched successfully',
-            bookings: result
+            bookings: bookings
         });
 
     } catch (error) {

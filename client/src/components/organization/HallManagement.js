@@ -116,7 +116,7 @@ export default function HallManagement() {
                                     </div>
                                     
                                     <div className="flex gap-2 w-full sm:w-auto">
-                                        <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 rounded-lg border-border/60 hover:bg-muted/50" onClick={() => router.push(`/venue/${hall.id}`)}>
+                                        <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 rounded-lg border-border/60 hover:bg-muted/50" onClick={() => router.push(`/halls/${hall.id}`)}>
                                             <ChevronRight className="w-4 h-4" /> View
                                         </Button>
                                         <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 rounded-lg border-border/60 hover:bg-muted/50" onClick={() => router.push(`/list-venue?edit=${hall.id}`)}>

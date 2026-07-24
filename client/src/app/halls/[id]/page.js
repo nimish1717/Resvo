@@ -259,7 +259,30 @@ export default function HallDetailPage() {
                                     <p className="text-xs text-muted-foreground">Includes taxes & fees</p>
                                 </CardHeader>
                                 <CardContent>
-                                    {bookingResult ? (
+                                    {user?.role === 'ORG_ADMIN' ? (
+                                        <div className="bg-primary/5 p-6 rounded-xl border border-primary/20 text-center space-y-4">
+                                            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                                                <CheckCircle2 className="w-6 h-6 text-primary" />
+                                            </div>
+                                            <h3 className="font-semibold text-lg">You are an Organizer</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                You are viewing the public preview of this venue. The booking form is hidden for organizers.
+                                            </p>
+                                            <Button 
+                                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-2"
+                                                onClick={() => router.push(`/list-venue?edit=${id}`)}
+                                            >
+                                                Edit Venue Details
+                                            </Button>
+                                            <Button 
+                                                variant="outline"
+                                                className="w-full border-border hover:bg-muted font-medium"
+                                                onClick={() => router.push(`/organization/halls`)}
+                                            >
+                                                Back to Dashboard
+                                            </Button>
+                                        </div>
+                                    ) : bookingResult ? (
                                         <div className="bg-green-950/30 p-6 rounded-xl border border-green-900/50 text-center">
                                             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
                                             <h3 className="font-semibold text-green-400 mb-1">Booking Requested</h3>
