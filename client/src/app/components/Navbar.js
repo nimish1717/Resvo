@@ -31,6 +31,7 @@ export default function Navbar() {
 
                     {/* Right Actions */}
                     <div className="flex items-center space-x-6">
+                        <ThemeToggle />
                         <button className="text-white/80 hover:text-white transition-colors hidden sm:block">
                             <Search className="w-5 h-5" />
                         </button>

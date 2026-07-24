@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../lib/authStore';
 import { Button } from '../../components/ui/Button';
@@ -13,6 +13,7 @@ export default function SignupPage() {
     const router = useRouter();
     const signup = useAuthStore((state) => state.signup);
     const orgAdminSignup = useAuthStore((state) => state.orgAdminSignup);
+    const sendOtp = useAuthStore((state) => state.sendOtp);
 
     const [tab, setTab] = useState('user'); // 'user' or 'org'
 
@@ -27,6 +28,37 @@ export default function SignupPage() {
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    // OTP State
+    const [otp, setOtp] = useState('');
+    const [otpSent, setOtpSent] = useState(false);
+    const [otpTimer, setOtpTimer] = useState(0);
+    const [sendingOtp, setSendingOtp] = useState(false);
+
+    useEffect(() => {
+        let interval;
+        if (otpTimer > 0) {
+            interval = setInterval(() => setOtpTimer((prev) => prev - 1), 1000);
+        }
+        return () => clearInterval(interval);
+    }, [otpTimer]);
+
+    const handleSendOtp = async () => {
+        if (!email) {
+            setError('Please enter your email first.');
+            return;
+        }
+        setError('');
+        setSendingOtp(true);
+        const { response, data } = await sendOtp(email);
+        setSendingOtp(false);
+        if (response.ok && data?.status) {
+            setOtpSent(true);
+            setOtpTimer(60);
+        } else {
+            setError(data?.message || 'Failed to send OTP');
+        }
+    };
+
     async function handleSubmit(e) {
         e.preventDefault();
         setError('');
@@ -35,11 +67,11 @@ export default function SignupPage() {
         let response, data;
 
         if (tab === 'user') {
-            const res = await signup(name, email, password);
+            const res = await signup(name, email, password, otp);
             response = res.response;
             data = res.data;
         } else {
-            const res = await orgAdminSignup(name, email, password, phone, organizationName);
+            const res = await orgAdminSignup(name, email, password, phone, organizationName, otp);
             response = res.response;
             data = res.data;
         }
@@ -108,14 +140,40 @@ export default function SignupPage() {
                         </div>
                         <div className="space-y-1">
                             <label className="text-sm font-medium text-foreground">Email</label>
-                            <Input
-                                type="email"
-                                placeholder="name@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
+                            <div className="flex gap-2">
+                                <Input
+                                    type="email"
+                                    placeholder="name@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    disabled={otpSent}
+                                    className="flex-1"
+                                />
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    onClick={handleSendOtp} 
+                                    disabled={!email || sendingOtp || otpTimer > 0}
+                                >
+                                    {otpTimer > 0 ? `Wait ${otpTimer}s` : (sendingOtp ? 'Sending...' : 'Send OTP')}
+                                </Button>
+                            </div>
                         </div>
+
+                        {otpSent && (
+                            <div className="space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <label className="text-sm font-medium text-foreground">Verification Code (OTP)</label>
+                                <Input
+                                    type="text"
+                                    placeholder="Enter 6-digit OTP"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    required
+                                    maxLength={6}
+                                />
+                            </div>
+                        )}
                         
                         {tab === 'org' && (
                             <>

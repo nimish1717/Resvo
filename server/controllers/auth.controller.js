@@ -2,6 +2,97 @@ const prisma = require('../lib/prismaClient');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const redis = require('../lib/redisClient');
+
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
+});
+
+const sendOtp = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ status: false, message: 'email is required' });
+        }
+
+        // Generate a 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Save to Redis with 5 min TTL
+        const cacheKey = `otp:${email}`;
+        await redis.set(cacheKey, otp, 'EX', 300);
+
+        // Generate HTML Email Template
+        const htmlTemplate = `
+        <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; background-color: #f7f9fb; padding: 40px 20px; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <!-- Header -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-bottom: 1px solid #eef2f6; padding: 24px 32px;">
+                    <tr>
+                        <td align="left" style="font-size: 24px; font-weight: 800; color: #5D3FD3; letter-spacing: -0.5px;">RESVO</td>
+                        <td align="right" style="font-size: 12px; color: #666;">Secure. Simple. Seamless.</td>
+                    </tr>
+                </table>
+                
+                <!-- Hero -->
+                <div style="padding: 40px 32px; text-align: center;">
+                    <h1 style="margin: 0 0 16px; font-size: 32px; color: #111827;">Welcome to <span style="color: #5D3FD3;">Resvo!</span></h1>
+                    <p style="margin: 0 0 32px; font-size: 16px; color: #4b5563; line-height: 1.5;">Thank you for signing up. To complete your registration, please verify your email address using the OTP below.</p>
+                    
+                    <!-- OTP Box -->
+                    <h3 style="margin: 0 0 16px; font-size: 18px; color: #111827;">Your OTP Code</h3>
+                    <div style="margin-bottom: 24px;">
+                        ${otp.split('').map(digit => `<div style="width: 45px; height: 55px; border: 1px solid #e5e7eb; border-radius: 8px; display: inline-block; margin: 0 4px; text-align: center; line-height: 55px; font-size: 28px; font-weight: 700; color: #5D3FD3; background-color: #ffffff;">${digit}</div>`).join('')}
+                    </div>
+                    
+                    <p style="margin: 0; font-size: 14px; color: #6b7280;">This code will expire in <strong style="color: #5D3FD3;">5 minutes</strong>.</p>
+                </div>
+                
+                <!-- Security Tip -->
+                <div style="padding: 0 32px 40px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
+                        <tr>
+                            <td width="40" valign="top" style="padding-right: 16px;">
+                                <div style="background-color: #ede9fe; width: 40px; height: 40px; border-radius: 50%; text-align: center; line-height: 40px; font-size: 20px;">🔒</div>
+                            </td>
+                            <td valign="top">
+                                <h4 style="margin: 0 0 8px; font-size: 16px; color: #0f172a;">Security Tip</h4>
+                                <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.5;">Do not share this OTP with anyone. Resvo will never ask for your OTP or password.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background-color: #f8fafc; padding: 32px; text-align: center; border-top: 1px solid #eef2f6;">
+                    <p style="margin: 0 0 16px; font-size: 12px; color: #94a3b8;">If you didn't create an account with <span style="color: #5D3FD3;">Resvo</span>, you can safely ignore this email.</p>
+                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">&copy; ${new Date().getFullYear()} Resvo. All rights reserved.<br/>Resvo Technologies Pvt. Ltd.</p>
+                </div>
+            </div>
+        </div>
+        `;
+
+        // Send Email
+        await transporter.sendMail({
+            from: '"Resvo Verify" <noreply@resvo.com>',
+            to: email,
+            subject: 'Your Resvo Verification Code',
+            text: `Your OTP is ${otp}. It will expire in 5 minutes.`, // Plain text fallback
+            html: htmlTemplate // Rich HTML version
+        });
+
+        return res.status(200).json({ status: true, message: 'OTP sent successfully' });
+    } catch (error) {
+        console.error('Error sending OTP:', error);
+        return res.status(500).json({ status: false, message: 'Failed to send OTP' });
+    }
+};
 
 const generateTokens = async (userId, email, isSuperAdmin, role) => {
     const finalRole = isSuperAdmin ? 'SUPER_ADMIN' : role;
@@ -22,12 +113,12 @@ const generateTokens = async (userId, email, isSuperAdmin, role) => {
 
 const userSignup = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, otp } = req.body;
 
-        if (!name || !email || !password) {
+        if (!name || !email || !password || !otp) {
             return res.status(400).json({
                 status: false,
-                message: 'name, email, and password are all required'
+                message: 'name, email, password, and otp are all required'
             });
         }
 
@@ -45,6 +136,14 @@ const userSignup = async (req, res) => {
                 message: 'An account with this email already exists'
             });
         }
+
+        // Validate OTP
+        const cacheKey = `otp:${email}`;
+        const storedOtp = await redis.get(cacheKey);
+        if (!storedOtp || storedOtp !== otp) {
+            return res.status(400).json({ status: false, message: 'Invalid or expired OTP' });
+        }
+        await redis.del(cacheKey);
 
         const passwordHash = await bcrypt.hash(password, 10);
 
@@ -89,12 +188,12 @@ const userSignup = async (req, res) => {
 
 const orgAdminSignup = async (req, res) => {
     try {
-        const { name, email, password, phone, organizationName } = req.body;
+        const { name, email, password, phone, organizationName, otp } = req.body;
 
-        if (!name || !email || !password || !phone || !organizationName) {
+        if (!name || !email || !password || !phone || !organizationName || !otp) {
             return res.status(400).json({
                 status: false,
-                message: 'name, email, password, phone, and organizationName are required'
+                message: 'name, email, password, phone, organizationName, and otp are required'
             });
         }
 
@@ -112,6 +211,14 @@ const orgAdminSignup = async (req, res) => {
                 message: 'An account with this email already exists'
             });
         }
+
+        // Validate OTP
+        const cacheKey = `otp:${email}`;
+        const storedOtp = await redis.get(cacheKey);
+        if (!storedOtp || storedOtp !== otp) {
+            return res.status(400).json({ status: false, message: 'Invalid or expired OTP' });
+        }
+        await redis.del(cacheKey);
 
         const passwordHash = await bcrypt.hash(password, 10);
 
@@ -323,6 +430,7 @@ const logout = async (req, res) => {
 }
 
 module.exports = {
+    sendOtp,
     userSignup,
     orgAdminSignup,
     login,

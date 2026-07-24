@@ -2,7 +2,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const RedisStore = require("rate-limit-redis").default;
 const redis = require("../lib/redisClient");
-const { userSignup, orgAdminSignup, login, refresh, logout } = require("../controllers/auth.controller");
+const { sendOtp, userSignup, orgAdminSignup, login, refresh, logout } = require("../controllers/auth.controller");
 
 const router = express.Router();
 
@@ -34,6 +34,7 @@ const refreshLimiter = rateLimit({
     }
 });
 
+router.post('/send-otp', authLimiter, sendOtp);
 router.post('/signup', authLimiter, userSignup);
 router.post('/org-signup', authLimiter, orgAdminSignup);
 router.post('/login', authLimiter, login);

@@ -16,10 +16,17 @@ export const useAuthStore = create((set, get) => ({
         set({ loading: false });
     },
 
-    signup: async (name, email, password) => {
+    sendOtp: async (email) => {
+        return await apiFetch('/auth/send-otp', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        });
+    },
+
+    signup: async (name, email, password, otp) => {
         const { response, data } = await apiFetch('/auth/signup', {
             method: 'POST',
-            body: JSON.stringify({ name, email, password }),
+            body: JSON.stringify({ name, email, password, otp }),
         });
         if (response.ok) {
             set({ accessToken: data.token, user: data.user });
@@ -27,10 +34,10 @@ export const useAuthStore = create((set, get) => ({
         return { response, data };
     },
 
-    orgAdminSignup: async (name, email, password, phone, organizationName) => {
+    orgAdminSignup: async (name, email, password, phone, organizationName, otp) => {
         const { response, data } = await apiFetch('/auth/org-signup', {
             method: 'POST',
-            body: JSON.stringify({ name, email, password, phone, organizationName }),
+            body: JSON.stringify({ name, email, password, phone, organizationName, otp }),
         });
         if (response.ok) {
             set({ accessToken: data.token, user: data.user });
